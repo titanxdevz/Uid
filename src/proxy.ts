@@ -28,10 +28,10 @@ export default auth(async (req: NextRequest & { auth?: unknown }) => {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  if (isLoggedIn && pathname === "/") {
+  if (isLoggedIn && (pathname === "/login" || pathname === "/")) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
@@ -51,5 +51,5 @@ export default auth(async (req: NextRequest & { auth?: unknown }) => {
 });
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*", "/management/:path*", "/uids/:path*", "/profile/:path*", "/api/:path*"],
+  matcher: ["/", "/login", "/dashboard/:path*", "/management/:path*", "/uids/:path*", "/profile/:path*", "/api/:path*"],
 };

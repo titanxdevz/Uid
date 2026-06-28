@@ -67,7 +67,7 @@ function MobileNavbar() {
           })}
           <div className="border-t border-white/5 pt-6 mt-auto">
             <button
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={() => signOut({ callbackUrl: "/login" })}
               className="flex w-full items-center gap-3.5 h-12 px-4 rounded-xl text-sm font-bold text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/15 transition-all cursor-pointer"
             >
               <LogOut className="h-4.5 w-4.5" />
@@ -82,7 +82,7 @@ function MobileNavbar() {
 
 export function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isGuestPage = pathname === "/" || pathname === "/register";
+  const isGuestPage = pathname === "/" || pathname === "/login" || pathname === "/register";
 
   return (
     <div className="relative min-h-screen w-full text-white overflow-x-hidden">

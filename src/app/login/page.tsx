@@ -1,13 +1,11 @@
 "use client";
 
+import { signIn } from "next-auth/react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Fingerprint, Loader2, Mail, Lock } from "lucide-react";
 import Link from "next/link";
-import { UserPlus, Loader2, User, Mail, Lock } from "lucide-react";
 
-export default function RegisterPage() {
-  const router = useRouter();
-  const [name, setName] = useState("");
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,19 +16,17 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
     });
 
-    const data = await res.json();
-
-    if (!data.success) {
-      setError(data.error || "Registration failed");
+    if (result?.error) {
+      setError("Invalid email or password");
       setLoading(false);
     } else {
-      router.push("/");
+      window.location.href = "/dashboard";
     }
   }
 
@@ -40,37 +36,14 @@ export default function RegisterPage() {
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 border border-white/10 shadow-[0_0_20px_rgba(99,102,241,0.4)] animate-pulse">
-            <UserPlus className="h-6 w-6 text-white" />
+            <Fingerprint className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-widest bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-neutral-400 uppercase">Create Account</h1>
-          <p className="mt-2 text-xs text-neutral-400 font-semibold uppercase tracking-wider">Register for UID Manager</p>
+          <h1 className="text-2xl font-black text-white tracking-widest bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-neutral-400 uppercase">92lr</h1>
+          <p className="mt-2 text-xs text-neutral-400 font-semibold uppercase tracking-wider">Sign in to your account</p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label
-              htmlFor="name"
-              className="text-xs font-bold uppercase tracking-wider text-neutral-400"
-            >
-              Name
-            </label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
-              <input
-                id="name"
-                type="text"
-                autoComplete="name"
-                placeholder="Your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                autoFocus
-                className="block w-full h-12 pl-11 pr-4 rounded-xl glass-input placeholder:text-neutral-600"
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
             <label
               htmlFor="email"
@@ -88,6 +61,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoFocus
                 className="block w-full h-12 pl-11 pr-4 rounded-xl glass-input placeholder:text-neutral-600"
               />
             </div>
@@ -105,12 +79,11 @@ export default function RegisterPage() {
               <input
                 id="password"
                 type="password"
-                autoComplete="new-password"
-                placeholder="Enter password (min 6 chars)"
+                autoComplete="current-password"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
                 className="block w-full h-12 pl-11 pr-4 rounded-xl glass-input placeholder:text-neutral-600"
               />
             </div>
@@ -130,19 +103,19 @@ export default function RegisterPage() {
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Registering...</span>
+                <span>Signing in...</span>
               </>
             ) : (
-              <span>Register</span>
+              <span>Sign in</span>
             )}
           </button>
         </form>
 
         {/* Footer */}
         <p className="mt-8 text-center text-xs text-neutral-500 font-semibold uppercase tracking-wider">
-          Already have an account?{" "}
-          <Link href="/login" className="font-bold text-indigo-400 hover:text-indigo-300 underline underline-offset-4 decoration-2 transition-all">
-            Sign in
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="font-bold text-indigo-400 hover:text-indigo-300 underline underline-offset-4 decoration-2 transition-all">
+            Register
           </Link>
         </p>
       </div>

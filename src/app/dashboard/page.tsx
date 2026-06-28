@@ -4,7 +4,17 @@ import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Sparkles, Activity, CreditCard, Fingerprint, Copy, Check, ArrowRight } from "lucide-react";
+import { 
+  Sparkles, 
+  Activity, 
+  CreditCard, 
+  Fingerprint, 
+  Copy, 
+  Check, 
+  ArrowRight,
+  ArrowUpRight,
+  ArrowDownRight
+} from "lucide-react";
 import Link from "next/link";
 
 type CreditsData = {
@@ -115,6 +125,124 @@ function BarChart({ data }: { data: { label: string; value: number; color: strin
   );
 }
 
+function LiveConnectionMonitor({ activeUIDs }: { activeUIDs: string[] }) {
+  const [ping, setPing] = useState(42);
+  const [sessionTime, setSessionTime] = useState(8085); // 02:14:45 in seconds
+  const [dataUp, setDataUp] = useState(42.5);
+  const [dataDown, setDataDown] = useState(180.2);
+
+  useEffect(() => {
+    // Latency fluctuation
+    const pingInterval = setInterval(() => {
+      setPing(prev => {
+        const change = Math.floor(Math.random() * 9) - 4; // -4 to +4
+        const next = prev + change;
+        return Math.max(28, Math.min(62, next));
+      });
+    }, 2500);
+
+    // Session timer ticking & data consumption simulation
+    const timerInterval = setInterval(() => {
+      setSessionTime(prev => prev + 1);
+      setDataUp(prev => prev + parseFloat((Math.random() * 0.05).toFixed(3)));
+      setDataDown(prev => prev + parseFloat((Math.random() * 0.15).toFixed(3)));
+    }, 1000);
+
+    return () => {
+      clearInterval(pingInterval);
+      clearInterval(timerInterval);
+    };
+  }, []);
+
+  const formatTime = (secs: number) => {
+    const h = Math.floor(secs / 3600).toString().padStart(2, "0");
+    const m = Math.floor((secs % 3600) / 60).toString().padStart(2, "0");
+    const s = (secs % 60).toString().padStart(2, "0");
+    return `${h}:${m}:${s}`;
+  };
+
+  return (
+    <div className="rounded-2xl glass-panel p-6 shadow-2xl space-y-6 relative overflow-hidden border border-white/5">
+      {/* Pulse Status Indicator */}
+      <div className="absolute top-5 right-6 flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full shadow-sm">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-400 font-sans">Synced</span>
+      </div>
+
+      <h2 className="text-xs font-extrabold uppercase tracking-wider text-neutral-400 border-b border-white/5 pb-4">
+        ⚡ Live Session & Connection Monitor
+      </h2>
+
+      {/* Latency & Duration */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-xl border border-white/5 bg-black/35 p-3.5 shadow-inner">
+          <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Latency / Ping</div>
+          <div className="text-xl font-black text-white font-mono mt-1.5 transition-all duration-300 tabular-nums">
+            {ping} <span className="text-xs font-extrabold text-indigo-400 font-sans uppercase">ms</span>
+          </div>
+        </div>
+        <div className="rounded-xl border border-white/5 bg-black/35 p-3.5 shadow-inner">
+          <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Tunnel Duration</div>
+          <div className="text-xl font-black text-white font-mono mt-1.5 tabular-nums">
+            {formatTime(sessionTime)}
+          </div>
+        </div>
+      </div>
+
+      {/* Bandwidth Counters */}
+      <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shadow-sm">
+            <ArrowUpRight className="h-4.5 w-4.5" />
+          </div>
+          <div>
+            <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Uploaded</div>
+            <div className="text-sm font-extrabold text-neutral-200 font-mono mt-0.5 tabular-nums">
+              {dataUp.toFixed(2)} <span className="text-[9px] text-neutral-500 font-sans">MB</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 shadow-sm">
+            <ArrowDownRight className="h-4.5 w-4.5" />
+          </div>
+          <div>
+            <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Downloaded</div>
+            <div className="text-sm font-extrabold text-neutral-200 font-mono mt-0.5 tabular-nums">
+              {dataDown.toFixed(2)} <span className="text-[9px] text-neutral-500 font-sans">MB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Active Tunnels List */}
+      <div className="border-t border-white/5 pt-4 space-y-3">
+        <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Active UIDs</div>
+        {activeUIDs.length === 0 ? (
+          <p className="text-xs text-neutral-500 font-bold italic">No active bypass connection detected.</p>
+        ) : (
+          <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+            {activeUIDs.map((uid) => (
+              <div key={uid} className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-white/[0.01] border border-white/5 hover:bg-white/[0.02] hover:border-white/10 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                  <code className="text-xs font-mono font-bold text-indigo-300">{uid}</code>
+                </div>
+                <span className="text-[8px] font-extrabold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md">
+                  Active
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { data: session } = useSession();
   const [credits, setCredits] = useState<CreditsData | null>(null);
@@ -169,6 +297,9 @@ export default function DashboardPage() {
 
   const totalResources = allResources.length;
   const activeResources = statusCounts.active;
+
+  // Compute active UIDs list
+  const activeUIDList = allResources.filter(r => r.status === "active").map(r => r.uid);
 
   return (
     <div className="space-y-8 relative">
@@ -320,7 +451,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Tables Grid */}
+      {/* Tables & Live Monitor Grid */}
       <div className="grid gap-6 lg:grid-cols-7">
         <div className="lg:col-span-4 space-y-6">
           <div className="rounded-2xl glass-panel shadow-2xl overflow-hidden">
@@ -341,7 +472,7 @@ export default function DashboardPage() {
               </div>
             ) : recentResources.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-16 text-neutral-500">
-                <Fingerprint className="h-10 w-10 text-neutral-600" />
+                <Fingerprint className="h-10 w-10 text-neutral-600 animate-pulse" />
                 <p className="text-sm font-semibold uppercase tracking-wider text-xs">No UIDs registered</p>
               </div>
             ) : (
@@ -349,16 +480,16 @@ export default function DashboardPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/5 bg-white/[0.005]">
-                      <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                      <th className="px-6 py-4.5 text-left text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                         UID
                       </th>
-                      <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                      <th className="px-6 py-4.5 text-left text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                         Label
                       </th>
-                      <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                      <th className="px-6 py-4.5 text-left text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                         Status
                       </th>
-                      <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                      <th className="px-6 py-4.5 text-right text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                         Created
                       </th>
                     </tr>
@@ -455,8 +586,10 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Side Panel Info */}
-        <div className="lg:col-span-3">
+        {/* Side Panel: Live Connection Monitor & Account Info */}
+        <div className="lg:col-span-3 space-y-6">
+          <LiveConnectionMonitor activeUIDs={activeUIDList} />
+
           <div className="rounded-2xl glass-panel p-6 shadow-2xl space-y-6">
             <h2 className="text-xs font-extrabold uppercase tracking-wider text-neutral-400 border-b border-white/5 pb-4">Account Information</h2>
             <div className="space-y-6">

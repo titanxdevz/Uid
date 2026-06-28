@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   Globe,
   LayoutGrid,
-  ShieldAlert,
 } from "lucide-react";
 
 export default function DownloadsPage() {
@@ -85,18 +84,11 @@ export default function DownloadsPage() {
             <a
               href="/92lr UID Bypass.exe"
               download="92lr UID Bypass.exe"
-              className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-bold glass-button-primary cursor-pointer shadow-[0_4px_20px_rgba(99,102,241,0.2)]"
+              className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-bold glass-button-primary cursor-pointer shadow-[0_4px_20px_rgba(99,102,241,0.25)]"
             >
               <Download className="h-4.5 w-4.5" />
               Download Global Client
             </a>
-            <button
-              type="button"
-              className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-bold glass-button-secondary cursor-pointer"
-            >
-              <ShieldAlert className="h-4.5 w-4.5 text-emerald-400" />
-              Generate Custom EXE Builder
-            </button>
           </div>
         </div>
       </div>

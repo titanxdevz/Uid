@@ -157,7 +157,7 @@ export function Sidebar() {
           </Link>
           {!collapsed && (
             <button
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={() => signOut({ callbackUrl: "/login" })}
               className="rounded-xl p-2 text-neutral-400 transition-all duration-300 hover:bg-rose-500/10 hover:text-rose-400 border border-transparent hover:border-rose-500/15 cursor-pointer"
               title="Sign out"
             >
