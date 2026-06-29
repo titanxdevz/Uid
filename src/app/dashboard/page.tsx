@@ -3,26 +3,31 @@
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { 
-  Sparkles, 
-  Activity, 
-  CreditCard, 
-  Fingerprint, 
-  Copy, 
-  Check, 
+import {
+  Sparkles,
+  Activity,
+  CreditCard,
+  Fingerprint,
+  Copy,
+  Check,
   ArrowRight,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Zap,
+  Gauge,
+  Server,
+  Shield,
+  Clock,
+  TrendingUp,
+  User,
+  LogOut,
+  Settings,
+  Bell,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-type CreditsData = {
-  total: number;
-  used: number;
-  remaining: number;
-};
+type CreditsData = { total: number; used: number; remaining: number };
 
 type Resource = {
   _id: string;
@@ -49,197 +54,153 @@ const statusVariant: Record<string, "success" | "warning" | "destructive" | "sec
   suspended: "destructive",
 };
 
-const gradientMap: Record<string, string> = {
-  "#22c55e": "bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.35)] border border-emerald-400/30", 
-  "#f59e0b": "bg-gradient-to-t from-amber-600 to-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.35)] border border-amber-400/30", 
-  "#ef4444": "bg-gradient-to-t from-rose-600 to-rose-400 shadow-[0_0_15px_rgba(239,68,68,0.35)] border border-rose-400/30", 
-  "#a855f7": "bg-gradient-to-t from-red-600 to-red-400 shadow-[0_0_15px_rgba(220,38,38,0.35)] border border-red-400/30", 
-};
-
-function DonutChart({ used, total, size = 140 }: { used: number; total: number; size?: number }) {
+function MiniDonut({ used, total, size = 100 }: { used: number; total: number; size?: number }) {
   const pct = total ? (used / total) * 100 : 0;
-  const r = 46;
-  const cx = 60;
-  const cy = 60;
+  const r = 38;
+  const cx = 50;
+  const cy = 50;
   const circ = 2 * Math.PI * r;
   const offset = circ - (pct / 100) * circ;
 
   return (
-    <svg width={size} height={size} viewBox="0 0 120 120" className="drop-shadow-[0_0_12px_rgba(220,38,38,0.35)]">
+    <svg width={size} height={size} viewBox="0 0 100 100">
       <defs>
-        <linearGradient id="donutGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ef4444" />
-          <stop offset="50%" stopColor="#dc2626" />
-          <stop offset="100%" stopColor="#991b1b" />
+        <linearGradient id="donutGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#dc2626" />
+          <stop offset="100%" stopColor="#ef4444" />
         </linearGradient>
       </defs>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth={7} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={6} />
       <circle
         cx={cx}
         cy={cy}
         r={r}
         fill="none"
-        stroke="url(#donutGradient)"
-        strokeWidth={8}
+        stroke="url(#donutGrad)"
+        strokeWidth={7}
         strokeDasharray={circ}
         strokeDashoffset={offset}
         strokeLinecap="round"
         transform={`rotate(-90 ${cx} ${cy})`}
-        className="transition-all duration-1000 ease-out"
+        className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(220,38,38,0.4)]"
       />
     </svg>
   );
 }
 
-function BarChart({ data }: { data: { label: string; value: number; color: string }[] }) {
-  const max = Math.max(...data.map((d) => d.value), 1);
-
-  return (
-    <div className="relative pt-6">
-      {/* Background grid lines */}
-      <div className="absolute inset-x-0 bottom-[26px] top-6 flex flex-col justify-between pointer-events-none opacity-20">
-        <div className="border-t border-white/5 w-full" />
-        <div className="border-t border-white/5 w-full" />
-        <div className="border-t border-white/5 w-full" />
-      </div>
-
-      <div className="flex items-end gap-5 h-[140px] relative z-10">
-        {data.map((bar) => {
-          const gradClass = gradientMap[bar.color] || "bg-neutral-500";
-          return (
-            <div key={bar.label} className="flex flex-1 flex-col items-center gap-2">
-              <span className="text-xs font-bold text-neutral-200 font-mono tabular-nums">{bar.value}</span>
-              <div className="relative w-full rounded-t-xl bg-black/40 border border-white/5 h-24 overflow-hidden">
-                <div
-                  className={cn("absolute bottom-0 w-full rounded-t-lg transition-all duration-[800ms] ease-out", gradClass)}
-                  style={{
-                    height: `${(bar.value / max) * 100}%`,
-                  }}
-                />
-              </div>
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{bar.label}</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function LiveConnectionMonitor({ activeUIDs }: { activeUIDs: string[] }) {
+function LiveMonitor({ activeUIDs }: { activeUIDs: string[] }) {
   const [ping, setPing] = useState(42);
-  const [sessionTime, setSessionTime] = useState(8085); // 02:14:45 in seconds
+  const [sessionTime, setSessionTime] = useState(8085);
   const [dataUp, setDataUp] = useState(42.5);
   const [dataDown, setDataDown] = useState(180.2);
 
   useEffect(() => {
-    // Latency fluctuation
     const pingInterval = setInterval(() => {
-      setPing(prev => {
-        const change = Math.floor(Math.random() * 9) - 4; // -4 to +4
-        const next = prev + change;
-        return Math.max(28, Math.min(62, next));
-      });
+      setPing(prev => Math.max(28, Math.min(62, prev + Math.floor(Math.random() * 9) - 4)));
     }, 2500);
-
-    // Session timer ticking & data consumption simulation
     const timerInterval = setInterval(() => {
       setSessionTime(prev => prev + 1);
       setDataUp(prev => prev + parseFloat((Math.random() * 0.05).toFixed(3)));
       setDataDown(prev => prev + parseFloat((Math.random() * 0.15).toFixed(3)));
     }, 1000);
-
-    return () => {
-      clearInterval(pingInterval);
-      clearInterval(timerInterval);
-    };
+    return () => { clearInterval(pingInterval); clearInterval(timerInterval); };
   }, []);
 
-  const formatTime = (secs: number) => {
-    const h = Math.floor(secs / 3600).toString().padStart(2, "0");
-    const m = Math.floor((secs % 3600) / 60).toString().padStart(2, "0");
-    const s = (secs % 60).toString().padStart(2, "0");
-    return `${h}:${m}:${s}`;
+  const fmt = (s: number) => {
+    const h = Math.floor(s / 3600).toString().padStart(2, "0");
+    const m = Math.floor((s % 3600) / 60).toString().padStart(2, "0");
+    const sec = (s % 60).toString().padStart(2, "0");
+    return `${h}:${m}:${sec}`;
   };
 
   return (
-    <div className="rounded-2xl glass-panel p-6 shadow-2xl space-y-6 relative overflow-hidden border border-white/5">
-      {/* Pulse Status Indicator */}
-      <div className="absolute top-5 right-6 flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full shadow-sm">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-        </span>
-        <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-400 font-sans">Synced</span>
+    <div className="rounded-2xl bg-black/40 border border-red-900/20 p-5 space-y-4 relative overflow-hidden">
+      <div className="absolute top-3 right-4 flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+        <span className="text-[8px] font-bold uppercase tracking-widest text-emerald-400">Live</span>
       </div>
-
-      <h2 className="text-xs font-extrabold uppercase tracking-wider text-neutral-400 border-b border-white/5 pb-4">
-        ⚡ Live Session & Connection Monitor
-      </h2>
-
-      {/* Latency & Duration */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl border border-white/5 bg-black/35 p-3.5 shadow-inner">
-          <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Latency / Ping</div>
-          <div className="text-xl font-black text-white font-mono mt-1.5 transition-all duration-300 tabular-nums">
-            {ping} <span className="text-xs font-extrabold text-red-400 font-sans uppercase">ms</span>
-          </div>
-        </div>
-        <div className="rounded-xl border border-white/5 bg-black/35 p-3.5 shadow-inner">
-          <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Tunnel Duration</div>
-          <div className="text-xl font-black text-white font-mono mt-1.5 tabular-nums">
-            {formatTime(sessionTime)}
-          </div>
-        </div>
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+        <Zap className="h-3.5 w-3.5 text-red-400" />
+        Live Connection
       </div>
-
-      {/* Bandwidth Counters */}
-      <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 shadow-sm">
-            <ArrowUpRight className="h-4.5 w-4.5" />
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: "Ping", value: `${ping} ms`, icon: Gauge, color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
+          { label: "Uptime", value: fmt(sessionTime), icon: Clock, color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
+        ].map((s) => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className="rounded-xl bg-black/30 border border-white/5 p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className={`rounded-lg ${s.bg} p-1`}><Icon className={`h-3 w-3 ${s.color}`} /></div>
+                <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-500">{s.label}</span>
+              </div>
+              <p className="text-lg font-black text-white font-mono tabular-nums">{s.value}</p>
+            </div>
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/5">
+        <div className="flex items-center gap-2.5">
+          <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-1.5 text-rose-400">
+            <ArrowUpRight className="h-3 w-3" />
           </div>
           <div>
-            <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Uploaded</div>
-            <div className="text-sm font-extrabold text-neutral-200 font-mono mt-0.5 tabular-nums">
-              {dataUp.toFixed(2)} <span className="text-[9px] text-neutral-500 font-sans">MB</span>
-            </div>
+            <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-500">Up</p>
+            <p className="text-xs font-bold text-neutral-200 font-mono tabular-nums">{dataUp.toFixed(1)} <span className="text-[9px] text-neutral-500">MB</span></p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 shadow-sm">
-            <ArrowDownRight className="h-4.5 w-4.5" />
+        <div className="flex items-center gap-2.5">
+          <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-1.5 text-rose-400">
+            <ArrowDownRight className="h-3 w-3" />
           </div>
           <div>
-            <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Downloaded</div>
-            <div className="text-sm font-extrabold text-neutral-200 font-mono mt-0.5 tabular-nums">
-              {dataDown.toFixed(2)} <span className="text-[9px] text-neutral-500 font-sans">MB</span>
-            </div>
+            <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-500">Down</p>
+            <p className="text-xs font-bold text-neutral-200 font-mono tabular-nums">{dataDown.toFixed(1)} <span className="text-[9px] text-neutral-500">MB</span></p>
           </div>
         </div>
       </div>
-
-      {/* Active Tunnels List */}
-      <div className="border-t border-white/5 pt-4 space-y-3">
-        <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Active UIDs</div>
+      <div className="pt-2 border-t border-white/5">
+        <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-500 mb-2">Active UIDs</p>
         {activeUIDs.length === 0 ? (
-          <p className="text-xs text-neutral-500 font-bold italic">No active bypass connection detected.</p>
+          <p className="text-[10px] text-neutral-500 italic">No active connections</p>
         ) : (
-          <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-24 overflow-y-auto">
             {activeUIDs.map((uid) => (
-              <div key={uid} className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-white/[0.01] border border-white/5 hover:bg-white/[0.02] hover:border-white/10 transition-colors">
-                <div className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                  <code className="text-xs font-mono font-bold text-red-300">{uid}</code>
-                </div>
-                <span className="text-[8px] font-extrabold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md">
-                  Active
-                </span>
+              <div key={uid} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/[0.01] border border-white/5">
+                <code className="text-[10px] font-mono font-bold text-red-300">{uid}</code>
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
               </div>
             ))}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function StatusBarChart({ data }: { data: { label: string; value: number; color: string }[] }) {
+  const max = Math.max(...data.map((d) => d.value), 1);
+  return (
+    <div className="space-y-3">
+      {data.map((bar) => (
+        <div key={bar.label} className="space-y-1">
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="font-bold text-neutral-400 uppercase tracking-wider">{bar.label}</span>
+            <span className="font-mono font-bold text-white tabular-nums">{bar.value}</span>
+          </div>
+          <div className="h-2 rounded-full bg-black/40 border border-white/5 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-[800ms] ease-out"
+              style={{
+                width: `${(bar.value / max) * 100}%`,
+                background: bar.color,
+                boxShadow: `0 0 10px ${bar.color}66`,
+              }}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -255,7 +216,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const isAdmin = session?.user?.role === "admin" || session?.user?.role === "manager";
-
     Promise.all([
       fetch("/api/credits").then((r) => r.json()),
       fetch("/api/resources?limit=5").then((r) => r.json()),
@@ -279,7 +239,6 @@ export default function DashboardPage() {
 
   const usedPercent = credits?.total ? Math.round((credits.used / credits.total) * 100) : 0;
   const remainingPercent = credits?.total ? Math.round((credits.remaining / credits.total) * 100) : 0;
-
   const isAdmin = session?.user?.role === "admin" || session?.user?.role === "manager";
 
   const statusCounts = {
@@ -298,417 +257,287 @@ export default function DashboardPage() {
 
   const totalResources = allResources.length;
   const activeResources = statusCounts.active;
-
-  // Compute active UIDs list
   const activeUIDList = allResources.filter(r => r.status === "active").map(r => r.uid);
 
+  const actionLabel = (action: string) =>
+    action.replace(".", " ").replace(/_/g, " ");
+
   return (
-    <div className="space-y-8 relative overflow-hidden">
-      {/* Web pattern background */}
+    <div className="relative min-h-screen">
+      {/* Spider web background */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <svg className="w-full h-full opacity-[0.02]" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid slice">
+        <svg className="w-full h-full opacity-[0.015]" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid slice">
           {[80, 160, 240, 320, 400].map((r, i) => (
             <circle key={`dw${i}`} cx="250" cy="250" r={r} fill="none" stroke="#dc2626" strokeWidth={0.3 - i * 0.05} />
           ))}
           {Array.from({ length: 12 }).map((_, i) => (
-            <line key={`dr${i}`} x1="250" y1="250" x2={250 + 350 * Math.cos(i * Math.PI / 6)} y2={250 + 350 * Math.sin(i * Math.PI / 6)} stroke="#dc2626" strokeWidth="0.15" opacity="0.3" />
+            <line key={`dr${i}`} x1="250" y1="250" x2={250 + 350 * Math.cos(i * Math.PI / 6)} y2={250 + 350 * Math.sin(i * Math.PI / 6)} stroke="#dc2626" strokeWidth="0.12" opacity="0.2" />
           ))}
         </svg>
-        {/* Corner webs */}
-        <svg className="absolute top-0 left-0 w-40 h-40 opacity-[0.04]" viewBox="0 0 160 160">
-          <path d="M0 0 Q40 10 80 0 Q60 40 80 80 Q40 60 0 80 Q20 40 0 0Z" fill="none" stroke="#dc2626" strokeWidth="0.5" />
-          <path d="M0 0 L80 0 M0 0 L0 80 M0 0 L60 60" stroke="#dc2626" strokeWidth="0.6" opacity="0.5" />
-        </svg>
-        <svg className="absolute top-0 right-0 w-40 h-40 opacity-[0.04]" viewBox="0 0 160 160">
-          <path d="M160 0 Q120 10 80 0 Q100 40 80 80 Q120 60 160 80 Q140 40 160 0Z" fill="none" stroke="#dc2626" strokeWidth="0.5" />
-          <path d="M160 0 L80 0 M160 0 L160 80" stroke="#dc2626" strokeWidth="0.6" opacity="0.5" />
-        </svg>
-        <svg className="absolute bottom-0 left-0 w-40 h-40 opacity-[0.04]" viewBox="0 0 160 160">
-          <path d="M0 160 Q40 150 80 160 Q60 120 80 80 Q40 100 0 80" fill="none" stroke="#dc2626" strokeWidth="0.5" />
-          <path d="M0 160 L80 160 M0 160 L0 80" stroke="#dc2626" strokeWidth="0.6" opacity="0.5" />
-        </svg>
-        <svg className="absolute bottom-0 right-0 w-40 h-40 opacity-[0.04]" viewBox="0 0 160 160">
-          <path d="M160 160 Q120 150 80 160 Q100 120 80 80 Q120 100 160 80" fill="none" stroke="#dc2626" strokeWidth="0.5" />
-          <path d="M160 160 L80 160 M160 160 L160 80" stroke="#dc2626" strokeWidth="0.6" opacity="0.5" />
-        </svg>
-        {/* Spider silhouette */}
-        <div className="absolute top-12 right-[8%] animate-swing">
-          <svg width="22" height="34" viewBox="0 0 22 34" className="opacity-10">
-            <line x1="11" y1="0" x2="11" y2="18" stroke="#dc2626" strokeWidth="0.6" opacity="0.5" />
-            <ellipse cx="11" cy="24" rx="6" ry="8" fill="#dc2626" opacity="0.4" />
-            <circle cx="11" cy="21" r="3" fill="#dc2626" opacity="0.5" />
-            <path d="M5 24 Q2 21 3 18 M17 24 Q20 21 19 18" stroke="#dc2626" strokeWidth="1.2" fill="none" opacity="0.3" />
-          </svg>
-        </div>
-        {/* Red glows */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-red-600/5 blur-[120px] animate-red-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-red-800/5 blur-[100px]" />
+        <div className="absolute top-1/3 left-1/3 w-96 h-96 rounded-full bg-red-600/5 blur-[120px] animate-red-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-red-800/4 blur-[100px]" />
       </div>
 
-      <div className="relative z-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="relative shrink-0">
-            <div className="absolute inset-0 rounded-full bg-red-500/15 blur-[12px]" />
-            <div className="relative w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-900 border border-red-400/30 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
-              <Image src="/92lr.png" alt="92lr" width={22} height={22} className="object-contain" />
+      <div className="relative z-10 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="relative shrink-0">
+              <div className="absolute inset-0 rounded-full bg-red-500/15 blur-[10px]" />
+              <div className="relative w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-900 border border-red-400/30 shadow-[0_0_12px_rgba(220,38,38,0.25)]">
+                <Image src="/92lr.png" alt="92lr" width={22} height={22} className="object-contain" />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-neutral-500">Dashboard</p>
+              <h1 className="text-xl font-black text-white tracking-tight">
+                Good {new Date().getHours() < 12 ? "morning" : "afternoon"}, {session?.user?.name?.split(" ")[0]}
+              </h1>
             </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-white bg-clip-text bg-gradient-to-r from-white via-red-100 to-neutral-400">
-              Welcome back, {session?.user?.name?.split(" ")[0]}
-            </h1>
-            <p className="mt-1.5 text-sm text-red-400/60 font-medium">
-              Spider-Sense active &middot; all systems nominal
-            </p>
+          <div className="flex items-center gap-2">
+            <Badge className="capitalize bg-red-500/10 text-red-300 border border-red-500/20 rounded-lg px-2.5 py-1 text-[9px] font-bold tracking-wider">
+              <Shield className="h-2.5 w-2.5 mr-1" />
+              {session?.user?.role}
+            </Badge>
+            {isAdmin && (
+              <Link
+                href="/management"
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-red-900/25 bg-red-500/5 hover:bg-red-500/10 text-[9px] font-bold uppercase tracking-wider text-red-300 hover:text-red-200 transition-all"
+              >
+                <Settings className="h-3 w-3" />
+                Admin
+              </Link>
+            )}
+            <Link
+              href="/profile"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-white/5 hover:bg-white/[0.03] text-[9px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-200 transition-all"
+            >
+              <User className="h-3 w-3" />
+              Profile
+            </Link>
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-transparent hover:bg-rose-500/10 text-[9px] font-bold uppercase tracking-wider text-rose-400/70 hover:text-rose-300 transition-all cursor-pointer"
+            >
+              <LogOut className="h-3 w-3" />
+            </button>
           </div>
         </div>
-        {isAdmin && (
-          <Link
-            href="/management"
-            className="group inline-flex items-center gap-2 rounded-xl border border-red-900/30 bg-white/[0.02] hover:bg-red-500/5 backdrop-blur-md px-5 h-11 text-sm font-bold text-neutral-200 hover:text-red-300 hover:border-red-500/30 transition-all duration-300 shadow-lg cursor-pointer overflow-hidden"
-          >
-            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-red-400 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
-            Admin Panel
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        )}
-      </div>
 
-      {/* Metrics Cards */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {/* System status bar */}
+        <div className="rounded-xl bg-gradient-to-r from-red-500/5 via-red-600/5 to-transparent border border-red-900/15 p-3 flex items-center gap-3">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Spider-Sense Active</span>
+          <span className="text-[10px] text-neutral-600">|</span>
+          <span className="text-[10px] text-neutral-400 font-medium">All systems nominal &bull; {activeResources} active UIDs</span>
+        </div>
+
+        {/* Metric cards */}
         {loading ? (
-          <>
+          <div className="grid grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="animate-pulse rounded-2xl border border-white/5 bg-white/[0.01] backdrop-blur-md p-6 h-36" />
+              <div key={i} className="animate-pulse rounded-2xl border border-white/5 bg-white/[0.01] h-28" />
             ))}
-          </>
-        ) : (
-          <>
-            {/* Card 1 */}
-            <div className="relative group overflow-hidden rounded-2xl glass-card p-6 shadow-xl hover:-translate-y-1 hover:border-emerald-500/20">
-              <div className="absolute -inset-px bg-gradient-to-r from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
-              <div className="mb-4 flex items-center justify-between relative z-10">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
-                  Credits Remaining
-                </span>
-                <div className="rounded-xl bg-emerald-500/10 p-2.5 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.15)]">
-                  <Sparkles className="h-4.5 w-4.5 text-emerald-400" />
-                </div>
-              </div>
-              <div className="text-3xl font-black text-white relative z-10 tracking-tight font-mono">{credits?.remaining ?? 0}</div>
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/40 border border-white/5 relative z-10 shadow-inner">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_12px_rgba(16,185,129,0.5)] transition-all duration-[1000ms] ease-out"
-                  style={{ width: `${remainingPercent}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Card 2 */}
-            <div className="relative group overflow-hidden rounded-2xl glass-card p-6 shadow-xl hover:-translate-y-1 hover:border-amber-500/20">
-              <div className="absolute -inset-px bg-gradient-to-r from-amber-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
-              <div className="mb-4 flex items-center justify-between relative z-10">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
-                  Credits Used
-                </span>
-                <div className="rounded-xl bg-amber-500/10 p-2.5 border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.15)]">
-                  <Activity className="h-4.5 w-4.5 text-amber-400" />
-                </div>
-              </div>
-              <div className="text-3xl font-black text-white relative z-10 tracking-tight font-mono">{credits?.used ?? 0}</div>
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/40 border border-white/5 relative z-10 shadow-inner">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400 shadow-[0_0_12px_rgba(245,158,11,0.5)] transition-all duration-[1000ms] ease-out"
-                  style={{ width: `${usedPercent}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Card 3 */}
-            <div className="relative group overflow-hidden rounded-2xl glass-card p-6 shadow-xl hover:-translate-y-1 hover:border-red-500/20">
-              <div className="absolute -inset-px bg-gradient-to-r from-red-500/5 to-red-700/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
-              <div className="mb-4 flex items-center justify-between relative z-10">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
-                  Total Credits
-                </span>
-                <div className="rounded-xl bg-red-500/10 p-2.5 border border-red-500/20 shadow-[0_0_10px_rgba(220,38,38,0.15)]">
-                  <CreditCard className="h-4.5 w-4.5 text-red-400" />
-                </div>
-              </div>
-              <div className="text-3xl font-black text-white relative z-10 tracking-tight font-mono">{credits?.total ?? 0}</div>
-              <p className="mt-3 text-xs font-bold text-neutral-400 uppercase tracking-widest relative z-10">
-                <span className="text-red-400">{credits?.used ?? 0}</span> used &bull; <span className="text-red-300">{credits?.remaining ?? 0}</span> left
-              </p>
-            </div>
-
-            {/* Card 4 */}
-            <div className="relative group overflow-hidden rounded-2xl glass-card p-6 shadow-xl hover:-translate-y-1 hover:border-red-500/20">
-              <div className="absolute -inset-px bg-gradient-to-r from-red-500/5 to-red-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
-              <div className="mb-4 flex items-center justify-between relative z-10">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
-                  Active UIDs
-                </span>
-                <div className="rounded-xl bg-red-500/10 p-2.5 border border-red-500/20 shadow-[0_0_10px_rgba(220,38,38,0.15)]">
-                  <Fingerprint className="h-4.5 w-4.5 text-red-400" />
-                </div>
-              </div>
-              <div className="text-3xl font-black text-white relative z-10 tracking-tight font-mono">{activeResources}</div>
-              <p className="mt-3 text-xs font-bold text-neutral-400 uppercase tracking-widest relative z-10">
-                <span className="text-red-400">{totalResources}</span> total registered
-              </p>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Charts Grid */}
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <div className="rounded-2xl glass-panel p-6 shadow-2xl">
-            <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-neutral-400">Resources by Status</h2>
-            <BarChart data={barData} />
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: "Credits Remaining", value: credits?.remaining ?? 0, icon: Sparkles, grad: "from-emerald-500/10 to-emerald-600/5 border-emerald-500/15", iconBg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", barColor: "from-emerald-500 to-teal-400", pct: remainingPercent },
+              { label: "Active UIDs", value: activeResources, icon: Fingerprint, grad: "from-red-500/10 to-red-600/5 border-red-500/15", iconBg: "bg-red-500/10 text-red-400 border-red-500/20", barColor: "from-red-500 to-rose-400", pct: totalResources ? (activeResources / totalResources) * 100 : 0 },
+              { label: "Total Resources", value: totalResources, icon: Server, grad: "from-amber-500/10 to-amber-600/5 border-amber-500/15", iconBg: "bg-amber-500/10 text-amber-400 border-amber-500/20", barColor: "from-amber-500 to-orange-400", pct: 100 },
+              { label: "Credits Used", value: credits?.used ?? 0, icon: TrendingUp, grad: "from-violet-500/10 to-violet-600/5 border-violet-500/15", iconBg: "bg-violet-500/10 text-violet-400 border-violet-500/20", barColor: "from-violet-500 to-purple-400", pct: usedPercent },
+            ].map((s) => {
+              const Icon = s.icon;
+              return (
+                <div key={s.label} className={`relative rounded-2xl bg-gradient-to-br ${s.grad} border p-4 overflow-hidden group hover:-translate-y-0.5 transition-all duration-300`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-500">{s.label}</span>
+                    <div className={`rounded-lg ${s.iconBg} p-1.5 border`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-black text-white font-mono tracking-tight tabular-nums">{s.value}</p>
+                  <div className="mt-3 h-1.5 rounded-full bg-black/40 border border-white/5 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${s.barColor} transition-all duration-1000 ease-out`}
+                      style={{ width: `${Math.min(s.pct, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-        <div className="lg:col-span-2">
-          <div className="rounded-2xl glass-panel p-6 shadow-2xl h-full flex flex-col justify-between">
-            <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-neutral-400">Credit Allocation</h2>
-            <div className="flex flex-col items-center py-4">
+        {/* Main grid: charts + tables */}
+        <div className="grid grid-cols-5 gap-5">
+          {/* Left — resources bar chart */}
+          <div className="col-span-3 rounded-2xl bg-black/40 border border-red-900/20 p-5">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+                <Activity className="h-3.5 w-3.5 text-red-400" />
+                Resources by Status
+              </h2>
+              <span className="text-[9px] font-mono font-bold text-neutral-500">{totalResources} total</span>
+            </div>
+            <StatusBarChart data={barData} />
+          </div>
+
+          {/* Right — credit allocation donut */}
+          <div className="col-span-2 rounded-2xl bg-black/40 border border-red-900/20 p-5 flex flex-col">
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-2 mb-4">
+              <CreditCard className="h-3.5 w-3.5 text-red-400" />
+              Credit Allocation
+            </h2>
+            <div className="flex-1 flex flex-col items-center justify-center">
               <div className="relative">
-                <DonutChart used={credits?.used ?? 0} total={credits?.total ?? 0} />
+                <MiniDonut used={credits?.used ?? 0} total={credits?.total ?? 0} />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
-                    <div className="text-2xl font-black text-white tracking-tight font-mono">{usedPercent}%</div>
-                    <div className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">used</div>
+                    <p className="text-lg font-black text-white font-mono">{usedPercent}%</p>
+                    <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-500">Used</p>
                   </div>
                 </div>
               </div>
-              <div className="mt-6 flex w-full justify-center gap-6 text-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(220,38,38,0.8)]" />
-                  <span className="text-neutral-400 font-bold uppercase tracking-wider text-[10px]">
-                    Used: <span className="text-neutral-200 font-mono font-semibold text-xs ml-1">{credits?.used ?? 0}</span>
-                  </span>
+              <div className="flex gap-5 mt-4">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(220,38,38,0.6)]" />
+                  <span className="text-[9px] font-bold text-neutral-400">Used <span className="text-white font-mono">{credits?.used ?? 0}</span></span>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <div className="h-2 w-2 rounded-full bg-red-400 shadow-[0_0_8px_rgba(220,38,38,0.8)]" />
-                  <span className="text-neutral-400 font-bold uppercase tracking-wider text-[10px]">
-                    Left: <span className="text-neutral-200 font-mono font-semibold text-xs ml-1">{credits?.remaining ?? 0}</span>
-                  </span>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(220,38,38,0.6)]" />
+                  <span className="text-[9px] font-bold text-neutral-400">Left <span className="text-white font-mono">{credits?.remaining ?? 0}</span></span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Tables & Live Monitor Grid */}
-      <div className="grid gap-6 lg:grid-cols-7">
-        <div className="lg:col-span-4 space-y-6">
-          <div className="rounded-2xl glass-panel shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/5 px-6 py-5 bg-white/[0.01]">
-              <h2 className="text-xs font-extrabold uppercase tracking-wider text-neutral-400">Recent UIDs</h2>
-              <Link
-                href="/uids"
-                className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors uppercase tracking-widest decoration-2 hover:underline underline-offset-4"
-              >
-                Manage UIDs
+        {/* Bottom grid: recent UIDs + live monitor + activity */}
+        <div className="grid grid-cols-5 gap-5">
+          {/* Recent UIDs — wider */}
+          <div className="col-span-2 rounded-2xl bg-black/40 border border-red-900/20 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-red-900/10">
+              <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+                <Fingerprint className="h-3.5 w-3.5 text-red-400" />
+                Recent UIDs
+              </h2>
+              <Link href="/uids" className="text-[9px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors">
+                View All
               </Link>
             </div>
             {loading ? (
-              <div className="space-y-4 p-6">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-12 animate-pulse rounded-xl bg-white/[0.01]" />
-                ))}
+              <div className="p-5 space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-10 animate-pulse rounded-xl bg-white/[0.01]" />)}
               </div>
             ) : recentResources.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-16 text-neutral-500">
-                <Fingerprint className="h-10 w-10 text-neutral-600 animate-pulse" />
-                <p className="text-sm font-semibold uppercase tracking-wider text-xs">No UIDs registered</p>
+              <div className="flex flex-col items-center gap-2 py-12 text-neutral-500">
+                <Fingerprint className="h-8 w-8 text-neutral-600" />
+                <p className="text-[10px] font-bold uppercase tracking-wider">No UIDs yet</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-white/5 bg-white/[0.005]">
-                      <th className="px-6 py-4.5 text-left text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                        UID
-                      </th>
-                      <th className="px-6 py-4.5 text-left text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                        Label
-                      </th>
-                      <th className="px-6 py-4.5 text-left text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                        Status
-                      </th>
-                      <th className="px-6 py-4.5 text-right text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                        Created
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentResources.map((r) => (
-                      <tr
-                        key={r._id}
-                        className="border-b border-white/[0.03] transition-colors last:border-0 hover:bg-white/[0.02]"
+              <div className="divide-y divide-white/[0.03]">
+                {recentResources.map((r) => (
+                  <div key={r._id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.01] transition-colors">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <code className="text-[11px] font-mono font-bold text-red-300 truncate">{r.uid}</code>
+                      <button
+                        onClick={() => copyUid(r.uid, r._id)}
+                        className="text-neutral-500 hover:text-white transition-colors shrink-0 cursor-pointer"
                       >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <code className="rounded-lg bg-black/40 border border-white/5 px-2.5 py-1 text-xs font-mono font-bold text-red-300 shadow-inner">
-                              {r.uid}
-                            </code>
-                            <button
-                              onClick={() => copyUid(r.uid, r._id)}
-                              className="text-neutral-500 transition hover:text-white cursor-pointer select-none"
-                            >
-                              {copiedId === r._id ? (
-                                <Check className="h-4 w-4 text-emerald-400 animate-scale-in" />
-                              ) : (
-                                <Copy className="h-4 w-4" />
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-neutral-300 font-semibold">{r.label ?? "—"}</td>
-                        <td className="px-6 py-4">
-                          <Badge variant={statusVariant[r.status] ?? "secondary"} className="capitalize border font-bold">
-                            {r.status}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 text-right text-xs text-neutral-400 font-mono font-semibold tabular-nums">
-                          {new Date(r.createdAt).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        {copiedId === r._id ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 font-semibold truncate max-w-[100px]">{r.label || "—"}</span>
+                    <Badge variant={statusVariant[r.status] ?? "secondary"} className="capitalize text-[8px] font-bold px-2 py-0.5 border">
+                      {r.status}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             )}
           </div>
 
-          {isAdmin && (
-            <div className="rounded-2xl glass-panel shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/5 px-6 py-5 bg-white/[0.01]">
-                <h2 className="text-xs font-extrabold uppercase tracking-wider text-neutral-400">Recent Activity</h2>
-                <Link
-                  href="/management"
-                  className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors uppercase tracking-widest decoration-2 hover:underline underline-offset-4"
-                >
-                  Central Logs
-                </Link>
-              </div>
-              {loading ? (
-                <div className="space-y-4 p-6">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-12 animate-pulse rounded-xl bg-white/[0.01]" />
-                  ))}
-                </div>
-              ) : recentActivity.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-16 text-neutral-500">
-                  <Activity className="h-10 w-10 text-neutral-600" />
-                  <p className="text-sm font-semibold uppercase tracking-wider text-xs">No recent actions</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-white/[0.03]">
-                  {recentActivity.map((log) => (
-                    <div key={log._id} className="flex items-center gap-4 px-6 py-4.5 hover:bg-white/[0.01] transition-colors">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 shadow-sm">
-                        <Activity className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-neutral-300 font-semibold">
-                          <span className="text-white">{log.actor?.name}</span>
-                          <span className="text-neutral-400 font-medium">
-                            {" "}
-                            {log.action.replace(".", " ")}
-                          </span>
-                          {log.targetType && (
-                            <span className="text-neutral-400 font-medium"> on <span className="text-red-400 font-bold">{log.targetType}</span></span>
-                          )}
-                        </p>
-                      </div>
-                      <time className="shrink-0 text-xs text-neutral-500 font-mono font-semibold tabular-nums">
-                        {new Date(log.createdAt).toLocaleDateString()}
-                      </time>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+          {/* Live monitor */}
+          <div className="col-span-1">
+            <LiveMonitor activeUIDs={activeUIDList} />
+          </div>
 
-        {/* Side Panel: Live Connection Monitor & Account Info */}
-        <div className="lg:col-span-3 space-y-6">
-          <LiveConnectionMonitor activeUIDs={activeUIDList} />
-
-          <div className="rounded-2xl glass-panel p-6 shadow-2xl space-y-6">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-neutral-400 border-b border-white/5 pb-4">Account Settings</h2>
-            <div className="space-y-6">
-              <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-500">
-                  Access Level
-                </p>
-                <Badge className="mt-2 capitalize bg-red-500/10 text-red-300 border border-red-500/20 px-3 py-1 rounded-full font-bold text-xs shadow-sm">
+          {/* Recent activity + account info */}
+          <div className="col-span-2 space-y-5">
+            {/* Account card */}
+            <div className="rounded-2xl bg-black/40 border border-red-900/20 p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500/30 to-red-700/30 border border-red-500/20 flex items-center justify-center text-sm font-bold text-red-400">
+                  {session?.user?.name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white truncate">{session?.user?.name}</p>
+                  <p className="text-[10px] text-neutral-500 truncate">{session?.user?.email}</p>
+                </div>
+                <Badge className="capitalize bg-red-500/10 text-red-300 border-red-500/20 rounded-lg text-[8px] font-bold px-2">
+                  <Shield className="h-2.5 w-2.5 mr-1" />
                   {session?.user?.role}
                 </Badge>
               </div>
-              <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-500">
-                  Email
-                </p>
-                <p className="mt-2 text-sm font-bold text-neutral-200">{session?.user?.email}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-500">
-                  Credits Consumption
-                </p>
-                <p className="mt-2 text-sm font-bold text-neutral-200 font-mono">
-                  {credits?.used ?? 0} <span className="text-neutral-600 font-normal">/</span> {credits?.total ?? 0}
-                </p>
-                <div className="mt-3.5 h-2 overflow-hidden rounded-full bg-black/40 border border-white/5 shadow-inner">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-red-500 to-red-700 shadow-[0_0_12px_rgba(220,38,38,0.5)] transition-all duration-[1000ms] ease-out"
-                    style={{ width: `${usedPercent}%` }}
-                  />
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-neutral-500 font-bold uppercase tracking-wider">Credit Usage</span>
+                  <span className="font-mono font-bold text-white">{credits?.used ?? 0} / {credits?.total ?? 0}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-black/40 border border-white/5 overflow-hidden">
+                  <div className="h-full rounded-full bg-gradient-to-r from-red-500 to-red-700 transition-all duration-1000" style={{ width: `${usedPercent}%` }} />
                 </div>
               </div>
-
-              {/* Quick Actions */}
-              <div className="pt-2 space-y-2.5 border-t border-white/5">
-                <Link
-                  href="/profile"
-                  className="group relative flex items-center justify-between w-full h-10 px-4 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-red-500/5 hover:border-red-500/20 text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-red-300 transition-all overflow-hidden"
-                >
-                  <span>Edit Profile</span>
-                  <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-red-400 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
-                </Link>
-                <Link
-                  href="/profile"
-                  className="group relative flex items-center justify-between w-full h-10 px-4 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-red-500/5 hover:border-red-500/20 text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-red-300 transition-all overflow-hidden"
-                >
-                  <span>Change Password</span>
-                  <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-red-400 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
-                </Link>
-              </div>
-
-              <div className="pt-2 space-y-2.5 border-t border-white/5">
-                <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="group relative flex items-center justify-between w-full h-10 px-4 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-rose-500/5 hover:border-rose-500/20 text-xs font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300 transition-all overflow-hidden"
-                >
-                  <span>Logout</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-rose-400 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
-                </button>
-              </div>
             </div>
+
+            {/* Recent activity */}
+            {isAdmin && (
+              <div className="rounded-2xl bg-black/40 border border-red-900/20 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-red-900/10">
+                  <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+                    <Activity className="h-3.5 w-3.5 text-red-400" />
+                    Activity
+                  </h2>
+                  <Link href="/management" className="text-[9px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors">
+                    All Logs
+                  </Link>
+                </div>
+                {recentActivity.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-10 text-neutral-500">
+                    <Activity className="h-6 w-6 text-neutral-600" />
+                    <p className="text-[10px] font-bold uppercase tracking-wider">No activity</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-white/[0.03]">
+                    {recentActivity.map((log) => (
+                      <div key={log._id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.01] transition-colors">
+                        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-1.5 text-red-400 shrink-0">
+                          <Activity className="h-3 w-3" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-neutral-300 truncate">
+                            <span className="font-bold text-white">{log.actor?.name}</span>
+                            <span className="text-neutral-500"> {actionLabel(log.action)}</span>
+                            {log.targetType && <span className="text-red-400 font-bold"> on {log.targetType}</span>}
+                          </p>
+                        </div>
+                        <time className="text-[9px] text-neutral-500 font-mono shrink-0 tabular-nums">
+                          {new Date(log.createdAt).toLocaleDateString()}
+                        </time>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }
