@@ -139,45 +139,22 @@ function ManagementContent() {
   ];
 
   return (
-    <div className="flex min-h-screen text-white relative overflow-hidden">
-      {/* Background effects (shared) */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <svg className="w-full h-full opacity-[0.015]" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid slice">
-          {[80, 160, 240, 320, 400].map((r, i) => (
-            <circle key={`dw${i}`} cx="250" cy="250" r={r} fill="none" stroke="#dc2626" strokeWidth={0.3 - i * 0.05} />
-          ))}
-          {Array.from({ length: 12 }).map((_, i) => (
-            <line key={`dr${i}`} x1="250" y1="250" x2={250 + 350 * Math.cos(i * Math.PI / 6)} y2={250 + 350 * Math.sin(i * Math.PI / 6)} stroke="#dc2626" strokeWidth="0.12" opacity="0.25" />
-          ))}
-        </svg>
-        <div className="absolute top-1/3 right-1/4 w-96 h-96 rounded-full bg-red-600/4 blur-[140px] animate-red-pulse" />
-        <div className="absolute bottom-1/4 left-1/3 w-80 h-80 rounded-full bg-red-800/4 blur-[120px]" />
-      </div>
-
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-[232px] z-20 flex flex-col border-r border-red-900/15 bg-[#080810]/85 backdrop-blur-2xl shadow-[4px_0_40px_rgba(0,0,0,0.5)]">
-        {/* Sidebar corner webs */}
-        <svg className="absolute top-0 right-0 w-24 h-24 opacity-[0.06] pointer-events-none" viewBox="0 0 160 160">
-          <path d="M160 0 Q120 10 80 0 Q100 40 80 80 Q120 60 160 80 Q140 40 160 0Z" fill="none" stroke="#dc2626" strokeWidth="0.5" />
-          <path d="M160 0 L80 0 M160 0 L160 80" stroke="#dc2626" strokeWidth="0.5" opacity="0.4" />
-        </svg>
-
-        {/* Logo area */}
-        <div className="flex items-center gap-3 px-5 pt-7 pb-6 border-b border-red-900/10">
+    <div className="space-y-8">
+      {/* Header with tab navigation */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
           <div className="relative shrink-0">
-            <div className="absolute inset-0 rounded-full bg-red-500/20 blur-[10px]" />
-            <div className="relative w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-900 border border-red-400/25 shadow-[0_0_12px_rgba(220,38,38,0.25)]">
-              <Image src="/92lr.png" alt="92lr" width={20} height={20} className="object-contain" />
+            <div className="absolute inset-0 rounded-full bg-red-500/15 blur-[10px]" />
+            <div className="relative w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-900 border border-red-400/30 shadow-[0_0_12px_rgba(220,38,38,0.25)]">
+              <Image src="/92lr.png" alt="92lr" width={22} height={22} className="object-contain" />
             </div>
           </div>
           <div>
-            <p className="text-xs font-black uppercase tracking-wider text-white">Admin</p>
-            <p className="text-[9px] text-red-400/40 font-semibold tracking-widest uppercase">Panel</p>
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-neutral-500">Admin Panel</p>
+            <h1 className="text-xl font-black text-white tracking-tight">Central Command</h1>
           </div>
         </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-3 pt-5 space-y-1">
+        <div className="flex items-center gap-2">
           {tabs.map((t) => {
             const Icon = t.icon;
             const isActive = tab === t.id;
@@ -185,84 +162,45 @@ function ManagementContent() {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`relative w-full flex items-center gap-3 h-11 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer overflow-hidden ${
+                className={`relative flex items-center gap-2 h-9 px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer overflow-hidden ${
                   isActive
                     ? "text-white"
                     : "text-neutral-500 hover:text-neutral-300"
                 }`}
               >
-                {isActive && (
-                  <span className="absolute inset-0 bg-gradient-to-r from-red-600/90 to-red-700/80 shadow-[0_0_20px_rgba(220,38,38,0.15)]" />
-                )}
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-gradient-to-b from-red-400 to-red-600 rounded-full" />
-                )}
-                {!isActive && (
-                  <span className="absolute inset-0 hover:bg-white/[0.03] transition-colors rounded-xl" />
-                )}
-                <Icon className="h-4 w-4 relative z-10 shrink-0" />
+                {isActive && <span className="absolute inset-0 bg-gradient-to-r from-red-600/90 to-red-700/80 shadow-[0_0_20px_rgba(220,38,38,0.15)]" />}
+                {!isActive && <span className="absolute inset-0 hover:bg-white/[0.03] transition-colors rounded-xl" />}
+                <Icon className="h-3.5 w-3.5 relative z-10" />
                 <span className="relative z-10">{t.label}</span>
               </button>
             );
           })}
-        </nav>
-
-        {/* Spidey silhouette */}
-        <div className="px-4 pb-4">
-          <div className="relative h-16 rounded-xl bg-gradient-to-b from-red-500/5 to-transparent border border-red-900/10 overflow-hidden">
-            <div className="absolute inset-0 opacity-[0.06]">
-              <svg viewBox="0 0 100 60" className="w-full h-full">
-                <ellipse cx="50" cy="46" rx="18" ry="12" fill="#dc2626" />
-                <circle cx="50" cy="40" r="7" fill="#dc2626" />
-                <path d="M50 30 L30 8 M50 30 L70 8 M50 30 L40 14 M50 30 L60 14" stroke="#dc2626" strokeWidth="1" fill="none" />
-              </svg>
-            </div>
-            <div className="relative z-10 flex flex-col justify-center h-full px-3">
-              <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-red-400/40">With great power...</p>
-            </div>
-          </div>
         </div>
+      </div>
 
-        {/* User info at bottom */}
-        <div className="border-t border-red-900/10 px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500/30 to-red-700/30 border border-red-500/20 flex items-center justify-center text-[10px] font-bold text-red-400 shrink-0">
-              {getInitials(session.user?.name || "U")}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold text-white truncate">{session.user?.name}</p>
-              <p className="text-[8px] uppercase tracking-widest text-red-400/50 font-semibold">{session.user?.role}</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="relative z-10 flex-1 ml-[232px]">
-        <div className="max-w-6xl mx-auto px-6 lg:px-10 py-8 space-y-8 pb-16">
-          {/* Stats overview cards */}
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: "Total Users", icon: Users, value: "—", color: "from-red-500/10 to-red-600/5 border-red-500/15", iconBg: "bg-red-500/10 text-red-400 border-red-500/20" },
-              { label: "Active Resources", icon: Fingerprint, value: "—", color: "from-emerald-500/10 to-emerald-600/5 border-emerald-500/15", iconBg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-              { label: "Audit Entries", icon: ScrollText, value: "—", color: "from-amber-500/10 to-amber-600/5 border-amber-500/15", iconBg: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
-            ].map((s, i) => {
-              const Icon = s.icon;
-              return (
-                <div key={i} className={`relative rounded-2xl bg-gradient-to-br ${s.color} border p-5 backdrop-blur-md shadow-lg overflow-hidden group hover:-translate-y-0.5 transition-all duration-300`}>
-                  <div className="absolute -inset-px bg-gradient-to-r from-transparent via-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
-                  <div className="flex items-center justify-between relative z-10">
-                    <div>
-                      <p className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">{s.label}</p>
-                      <p className="text-2xl font-black text-white mt-1.5 font-mono">{s.value}</p>
-                    </div>
-                    <div className={`rounded-xl ${s.iconBg} p-2.5 border shadow-sm`}>
-                      <Icon className="h-4.5 w-4.5" />
-                    </div>
-                  </div>
+      {/* Stats overview cards */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Total Users", icon: Users, value: stats.totalUsers, color: "from-red-500/10 to-red-600/5 border-red-500/15", iconBg: "bg-red-500/10 text-red-400 border-red-500/20" },
+          { label: "Active Resources", icon: Fingerprint, value: stats.activeResources, color: "from-emerald-500/10 to-emerald-600/5 border-emerald-500/15", iconBg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+          { label: "Audit Entries", icon: ScrollText, value: stats.auditToday, color: "from-amber-500/10 to-amber-600/5 border-amber-500/15", iconBg: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+        ].map((s, i) => {
+          const Icon = s.icon;
+          return (
+            <div key={i} className={`relative rounded-2xl bg-gradient-to-br ${s.color} border p-5 backdrop-blur-md shadow-lg overflow-hidden group hover:-translate-y-0.5 transition-all duration-300`}>
+              <div className="absolute -inset-px bg-gradient-to-r from-transparent via-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
+              <div className="flex items-center justify-between relative z-10">
+                <div>
+                  <p className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">{s.label}</p>
+                  <p className="text-2xl font-black text-white mt-1.5 font-mono">{s.value}</p>
                 </div>
-              );
-            })}
+                <div className={`rounded-xl ${s.iconBg} p-2.5 border shadow-sm`}>
+                  <Icon className="h-4.5 w-4.5" />
+                </div>
+              </div>
+            </div>
+          );
+        })}
           </div>
 
           {/* Micro stat boxes */}
@@ -290,18 +228,7 @@ function ManagementContent() {
             {tab === "audit" && <AuditTab />}
           </div>
         </div>
-      </div>
-
-      {/* Fixed swinging spider on main area */}
-      <div className="fixed top-16 right-[6%] z-10 pointer-events-none animate-swing">
-        <svg width="18" height="30" viewBox="0 0 20 32" className="opacity-[0.08]">
-          <line x1="10" y1="0" x2="10" y2="16" stroke="#dc2626" strokeWidth="0.5" opacity="0.4" />
-          <ellipse cx="10" cy="22" rx="5" ry="7" fill="#dc2626" opacity="0.35" />
-          <circle cx="10" cy="19" r="2.5" fill="#dc2626" opacity="0.45" />
-        </svg>
-      </div>
-    </div>
-  );
+      );
 }
 
 function TableSkeleton({ cols = 4 }: { cols?: number }) {
