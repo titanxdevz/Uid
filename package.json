@@ -10,7 +10,6 @@
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
-    "@next/swc-win32-x64-msvc": "^16.2.9",
     "@radix-ui/react-avatar": "^1.2.0",
     "@radix-ui/react-dropdown-menu": "^2.1.18",
     "@radix-ui/react-label": "^2.1.10",
@@ -26,6 +25,10 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.6.0"
+  },
+  "optionalDependencies": {
+    "@next/swc-win32-x64-msvc": "^16.2.9",
+    "@next/swc-linux-x64-gnu": "^16.2.9"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
