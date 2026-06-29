@@ -86,19 +86,27 @@ export function AppShellContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative min-h-screen w-full text-white overflow-x-hidden">
-      {/* Shared Ambient Background Glows */}
+      {/* Shared Ambient Background Glows - Spider-Man Red Theme */}
       <div className="fixed inset-0 -z-50 overflow-hidden bg-[#030307] pointer-events-none">
         <div 
-          className="absolute top-[10%] left-[10%] w-[450px] h-[450px] rounded-full bg-indigo-500/12 blur-[120px]" 
+          className="absolute top-[5%] left-[5%] w-[550px] h-[550px] rounded-full bg-red-600/15 blur-[140px]" 
           style={{ animation: 'floatBlob 25s infinite alternate ease-in-out' }} 
         />
         <div 
-          className="absolute bottom-[10%] right-[10%] w-[550px] h-[550px] rounded-full bg-blue-500/8 blur-[130px]" 
+          className="absolute bottom-[5%] right-[5%] w-[600px] h-[600px] rounded-full bg-red-700/10 blur-[150px]" 
           style={{ animation: 'floatBlob 35s infinite alternate-reverse ease-in-out' }} 
         />
         <div 
-          className="absolute top-[35%] left-[45%] w-[380px] h-[380px] rounded-full bg-violet-500/8 blur-[110px]" 
+          className="absolute top-[40%] left-[50%] w-[450px] h-[450px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500/8 blur-[120px]" 
           style={{ animation: 'floatBlob 30s infinite alternate ease-in-out' }} 
+        />
+        <div 
+          className="absolute top-[70%] left-[20%] w-[300px] h-[300px] rounded-full bg-red-800/10 blur-[100px]" 
+          style={{ animation: 'floatBlob 20s infinite alternate-reverse ease-in-out' }} 
+        />
+        <div 
+          className="absolute top-[20%] right-[20%] w-[250px] h-[250px] rounded-full bg-red-400/6 blur-[90px]" 
+          style={{ animation: 'floatBlob 28s infinite alternate ease-in-out' }} 
         />
       </div>
 

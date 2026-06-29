@@ -78,7 +78,7 @@ export function Sidebar() {
     >
       {/* Brand Header */}
       <div className="flex h-16 items-center gap-3 border-b border-white/5 px-4 bg-white/[0.01]">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 border border-white/10 shadow-[0_0_15px_rgba(99,102,241,0.25)]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-red-600 to-red-800 border border-white/10 shadow-[0_0_15px_rgba(220,38,38,0.25)]">
           <Fingerprint className="h-5 w-5 text-white" />
         </div>
         {!collapsed && (
@@ -111,14 +111,14 @@ export function Sidebar() {
               className={cn(
                 "group flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-semibold transition-all border cursor-pointer relative duration-300",
                 active
-                  ? "bg-indigo-500/10 text-indigo-300 border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)]"
+                  ? "bg-red-500/10 text-red-300 border-red-500/20 shadow-[0_0_15px_rgba(220,38,38,0.15)]"
                   : "text-neutral-400 hover:bg-white/[0.02] hover:border-white/[0.04] hover:text-neutral-200 border-transparent"
               )}
             >
               {active && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-indigo-400 to-violet-500 rounded-r-full shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-red-500 to-red-700 rounded-r-full shadow-[0_0_8px_rgba(220,38,38,0.8)]" />
               )}
-              <Icon className={cn("h-4.5 w-4.5 shrink-0 transition-all duration-300", active ? "text-indigo-400 scale-105" : "text-neutral-500 group-hover:text-neutral-300")} />
+              <Icon className={cn("h-4.5 w-4.5 shrink-0 transition-all duration-300", active ? "text-red-400 scale-105" : "text-neutral-500 group-hover:text-neutral-300")} />
               {!collapsed && (
                 <span className="transition-all duration-200">{item.label}</span>
               )}

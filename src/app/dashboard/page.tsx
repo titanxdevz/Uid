@@ -15,6 +15,7 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 type CreditsData = {
@@ -52,7 +53,7 @@ const gradientMap: Record<string, string> = {
   "#22c55e": "bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.35)] border border-emerald-400/30", 
   "#f59e0b": "bg-gradient-to-t from-amber-600 to-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.35)] border border-amber-400/30", 
   "#ef4444": "bg-gradient-to-t from-rose-600 to-rose-400 shadow-[0_0_15px_rgba(239,68,68,0.35)] border border-rose-400/30", 
-  "#a855f7": "bg-gradient-to-t from-purple-600 to-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.35)] border border-purple-400/30", 
+  "#a855f7": "bg-gradient-to-t from-red-600 to-red-400 shadow-[0_0_15px_rgba(220,38,38,0.35)] border border-red-400/30", 
 };
 
 function DonutChart({ used, total, size = 140 }: { used: number; total: number; size?: number }) {
@@ -64,12 +65,12 @@ function DonutChart({ used, total, size = 140 }: { used: number; total: number; 
   const offset = circ - (pct / 100) * circ;
 
   return (
-    <svg width={size} height={size} viewBox="0 0 120 120" className="drop-shadow-[0_0_12px_rgba(99,102,241,0.35)]">
+    <svg width={size} height={size} viewBox="0 0 120 120" className="drop-shadow-[0_0_12px_rgba(220,38,38,0.35)]">
       <defs>
         <linearGradient id="donutGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#818cf8" />
-          <stop offset="50%" stopColor="#6366f1" />
-          <stop offset="100%" stopColor="#4f46e5" />
+          <stop offset="0%" stopColor="#ef4444" />
+          <stop offset="50%" stopColor="#dc2626" />
+          <stop offset="100%" stopColor="#991b1b" />
         </linearGradient>
       </defs>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth={7} />
@@ -181,7 +182,7 @@ function LiveConnectionMonitor({ activeUIDs }: { activeUIDs: string[] }) {
         <div className="rounded-xl border border-white/5 bg-black/35 p-3.5 shadow-inner">
           <div className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-500">Latency / Ping</div>
           <div className="text-xl font-black text-white font-mono mt-1.5 transition-all duration-300 tabular-nums">
-            {ping} <span className="text-xs font-extrabold text-indigo-400 font-sans uppercase">ms</span>
+            {ping} <span className="text-xs font-extrabold text-red-400 font-sans uppercase">ms</span>
           </div>
         </div>
         <div className="rounded-xl border border-white/5 bg-black/35 p-3.5 shadow-inner">
@@ -195,7 +196,7 @@ function LiveConnectionMonitor({ activeUIDs }: { activeUIDs: string[] }) {
       {/* Bandwidth Counters */}
       <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 shadow-sm">
             <ArrowUpRight className="h-4.5 w-4.5" />
           </div>
           <div>
@@ -206,7 +207,7 @@ function LiveConnectionMonitor({ activeUIDs }: { activeUIDs: string[] }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 shadow-sm">
             <ArrowDownRight className="h-4.5 w-4.5" />
           </div>
           <div>
@@ -229,7 +230,7 @@ function LiveConnectionMonitor({ activeUIDs }: { activeUIDs: string[] }) {
               <div key={uid} className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-white/[0.01] border border-white/5 hover:bg-white/[0.02] hover:border-white/10 transition-colors">
                 <div className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                  <code className="text-xs font-mono font-bold text-indigo-300">{uid}</code>
+                  <code className="text-xs font-mono font-bold text-red-300">{uid}</code>
                 </div>
                 <span className="text-[8px] font-extrabold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md">
                   Active
@@ -302,22 +303,73 @@ export default function DashboardPage() {
   const activeUIDList = allResources.filter(r => r.status === "active").map(r => r.uid);
 
   return (
-    <div className="space-y-8 relative">
+    <div className="space-y-8 relative overflow-hidden">
+      {/* Web pattern background */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <svg className="w-full h-full opacity-[0.02]" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid slice">
+          {[80, 160, 240, 320, 400].map((r, i) => (
+            <circle key={`dw${i}`} cx="250" cy="250" r={r} fill="none" stroke="#dc2626" strokeWidth={0.3 - i * 0.05} />
+          ))}
+          {Array.from({ length: 12 }).map((_, i) => (
+            <line key={`dr${i}`} x1="250" y1="250" x2={250 + 350 * Math.cos(i * Math.PI / 6)} y2={250 + 350 * Math.sin(i * Math.PI / 6)} stroke="#dc2626" strokeWidth="0.15" opacity="0.3" />
+          ))}
+        </svg>
+        {/* Corner webs */}
+        <svg className="absolute top-0 left-0 w-40 h-40 opacity-[0.04]" viewBox="0 0 160 160">
+          <path d="M0 0 Q40 10 80 0 Q60 40 80 80 Q40 60 0 80 Q20 40 0 0Z" fill="none" stroke="#dc2626" strokeWidth="0.5" />
+          <path d="M0 0 L80 0 M0 0 L0 80 M0 0 L60 60" stroke="#dc2626" strokeWidth="0.6" opacity="0.5" />
+        </svg>
+        <svg className="absolute top-0 right-0 w-40 h-40 opacity-[0.04]" viewBox="0 0 160 160">
+          <path d="M160 0 Q120 10 80 0 Q100 40 80 80 Q120 60 160 80 Q140 40 160 0Z" fill="none" stroke="#dc2626" strokeWidth="0.5" />
+          <path d="M160 0 L80 0 M160 0 L160 80" stroke="#dc2626" strokeWidth="0.6" opacity="0.5" />
+        </svg>
+        <svg className="absolute bottom-0 left-0 w-40 h-40 opacity-[0.04]" viewBox="0 0 160 160">
+          <path d="M0 160 Q40 150 80 160 Q60 120 80 80 Q40 100 0 80" fill="none" stroke="#dc2626" strokeWidth="0.5" />
+          <path d="M0 160 L80 160 M0 160 L0 80" stroke="#dc2626" strokeWidth="0.6" opacity="0.5" />
+        </svg>
+        <svg className="absolute bottom-0 right-0 w-40 h-40 opacity-[0.04]" viewBox="0 0 160 160">
+          <path d="M160 160 Q120 150 80 160 Q100 120 80 80 Q120 100 160 80" fill="none" stroke="#dc2626" strokeWidth="0.5" />
+          <path d="M160 160 L80 160 M160 160 L160 80" stroke="#dc2626" strokeWidth="0.6" opacity="0.5" />
+        </svg>
+        {/* Spider silhouette */}
+        <div className="absolute top-12 right-[8%] animate-swing">
+          <svg width="22" height="34" viewBox="0 0 22 34" className="opacity-10">
+            <line x1="11" y1="0" x2="11" y2="18" stroke="#dc2626" strokeWidth="0.6" opacity="0.5" />
+            <ellipse cx="11" cy="24" rx="6" ry="8" fill="#dc2626" opacity="0.4" />
+            <circle cx="11" cy="21" r="3" fill="#dc2626" opacity="0.5" />
+            <path d="M5 24 Q2 21 3 18 M17 24 Q20 21 19 18" stroke="#dc2626" strokeWidth="1.2" fill="none" opacity="0.3" />
+          </svg>
+        </div>
+        {/* Red glows */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-red-600/5 blur-[120px] animate-red-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-red-800/5 blur-[100px]" />
+      </div>
+
+      <div className="relative z-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-white bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-neutral-400">
-            Welcome back, {session?.user?.name?.split(" ")[0]}
-          </h1>
-          <p className="mt-1.5 text-sm text-neutral-400 font-medium">
-            Here&apos;s a quick overview of your UID manager metrics.
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 rounded-full bg-red-500/15 blur-[12px]" />
+            <div className="relative w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-900 border border-red-400/30 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+              <Image src="/92lr.png" alt="92lr" width={22} height={22} className="object-contain" />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-white bg-clip-text bg-gradient-to-r from-white via-red-100 to-neutral-400">
+              Welcome back, {session?.user?.name?.split(" ")[0]}
+            </h1>
+            <p className="mt-1.5 text-sm text-red-400/60 font-medium">
+              Spider-Sense active &middot; all systems nominal
+            </p>
+          </div>
         </div>
         {isAdmin && (
           <Link
             href="/management"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] backdrop-blur-md px-5 h-11 text-sm font-bold text-neutral-200 hover:text-white hover:border-indigo-500/25 transition-all duration-300 shadow-lg cursor-pointer"
+            className="group inline-flex items-center gap-2 rounded-xl border border-red-900/30 bg-white/[0.02] hover:bg-red-500/5 backdrop-blur-md px-5 h-11 text-sm font-bold text-neutral-200 hover:text-red-300 hover:border-red-500/30 transition-all duration-300 shadow-lg cursor-pointer overflow-hidden"
           >
-            Management Panel
+            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-red-400 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+            Admin Panel
             <ArrowRight className="h-4 w-4" />
           </Link>
         )}
@@ -374,36 +426,36 @@ export default function DashboardPage() {
             </div>
 
             {/* Card 3 */}
-            <div className="relative group overflow-hidden rounded-2xl glass-card p-6 shadow-xl hover:-translate-y-1 hover:border-indigo-500/20">
-              <div className="absolute -inset-px bg-gradient-to-r from-indigo-500/5 to-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
+            <div className="relative group overflow-hidden rounded-2xl glass-card p-6 shadow-xl hover:-translate-y-1 hover:border-red-500/20">
+              <div className="absolute -inset-px bg-gradient-to-r from-red-500/5 to-red-700/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
               <div className="mb-4 flex items-center justify-between relative z-10">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
                   Total Credits
                 </span>
-                <div className="rounded-xl bg-indigo-500/10 p-2.5 border border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.15)]">
-                  <CreditCard className="h-4.5 w-4.5 text-indigo-400" />
+                <div className="rounded-xl bg-red-500/10 p-2.5 border border-red-500/20 shadow-[0_0_10px_rgba(220,38,38,0.15)]">
+                  <CreditCard className="h-4.5 w-4.5 text-red-400" />
                 </div>
               </div>
               <div className="text-3xl font-black text-white relative z-10 tracking-tight font-mono">{credits?.total ?? 0}</div>
               <p className="mt-3 text-xs font-bold text-neutral-400 uppercase tracking-widest relative z-10">
-                <span className="text-indigo-400">{credits?.used ?? 0}</span> used &bull; <span className="text-indigo-300">{credits?.remaining ?? 0}</span> left
+                <span className="text-red-400">{credits?.used ?? 0}</span> used &bull; <span className="text-red-300">{credits?.remaining ?? 0}</span> left
               </p>
             </div>
 
             {/* Card 4 */}
-            <div className="relative group overflow-hidden rounded-2xl glass-card p-6 shadow-xl hover:-translate-y-1 hover:border-purple-500/20">
-              <div className="absolute -inset-px bg-gradient-to-r from-purple-500/5 to-fuchsia-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
+            <div className="relative group overflow-hidden rounded-2xl glass-card p-6 shadow-xl hover:-translate-y-1 hover:border-red-500/20">
+              <div className="absolute -inset-px bg-gradient-to-r from-red-500/5 to-red-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
               <div className="mb-4 flex items-center justify-between relative z-10">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
                   Active UIDs
                 </span>
-                <div className="rounded-xl bg-purple-500/10 p-2.5 border border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.15)]">
-                  <Fingerprint className="h-4.5 w-4.5 text-purple-400" />
+                <div className="rounded-xl bg-red-500/10 p-2.5 border border-red-500/20 shadow-[0_0_10px_rgba(220,38,38,0.15)]">
+                  <Fingerprint className="h-4.5 w-4.5 text-red-400" />
                 </div>
               </div>
               <div className="text-3xl font-black text-white relative z-10 tracking-tight font-mono">{activeResources}</div>
               <p className="mt-3 text-xs font-bold text-neutral-400 uppercase tracking-widest relative z-10">
-                <span className="text-purple-400">{totalResources}</span> total registered
+                <span className="text-red-400">{totalResources}</span> total registered
               </p>
             </div>
           </>
@@ -434,13 +486,13 @@ export default function DashboardPage() {
               </div>
               <div className="mt-6 flex w-full justify-center gap-6 text-xs">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                  <div className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(220,38,38,0.8)]" />
                   <span className="text-neutral-400 font-bold uppercase tracking-wider text-[10px]">
                     Used: <span className="text-neutral-200 font-mono font-semibold text-xs ml-1">{credits?.used ?? 0}</span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <div className="h-2 w-2 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(167,139,250,0.8)]" />
+                  <div className="h-2 w-2 rounded-full bg-red-400 shadow-[0_0_8px_rgba(220,38,38,0.8)]" />
                   <span className="text-neutral-400 font-bold uppercase tracking-wider text-[10px]">
                     Left: <span className="text-neutral-200 font-mono font-semibold text-xs ml-1">{credits?.remaining ?? 0}</span>
                   </span>
@@ -459,7 +511,7 @@ export default function DashboardPage() {
               <h2 className="text-xs font-extrabold uppercase tracking-wider text-neutral-400">Recent UIDs</h2>
               <Link
                 href="/uids"
-                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-widest decoration-2 hover:underline underline-offset-4"
+                className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors uppercase tracking-widest decoration-2 hover:underline underline-offset-4"
               >
                 Manage UIDs
               </Link>
@@ -502,7 +554,7 @@ export default function DashboardPage() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <code className="rounded-lg bg-black/40 border border-white/5 px-2.5 py-1 text-xs font-mono font-bold text-indigo-300 shadow-inner">
+                            <code className="rounded-lg bg-black/40 border border-white/5 px-2.5 py-1 text-xs font-mono font-bold text-red-300 shadow-inner">
                               {r.uid}
                             </code>
                             <button
@@ -540,7 +592,7 @@ export default function DashboardPage() {
                 <h2 className="text-xs font-extrabold uppercase tracking-wider text-neutral-400">Recent Activity</h2>
                 <Link
                   href="/management"
-                  className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-widest decoration-2 hover:underline underline-offset-4"
+                  className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors uppercase tracking-widest decoration-2 hover:underline underline-offset-4"
                 >
                   Central Logs
                 </Link>
@@ -560,7 +612,7 @@ export default function DashboardPage() {
                 <div className="divide-y divide-white/[0.03]">
                   {recentActivity.map((log) => (
                     <div key={log._id} className="flex items-center gap-4 px-6 py-4.5 hover:bg-white/[0.01] transition-colors">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shadow-sm">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 shadow-sm">
                         <Activity className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -571,7 +623,7 @@ export default function DashboardPage() {
                             {log.action.replace(".", " ")}
                           </span>
                           {log.targetType && (
-                            <span className="text-neutral-400 font-medium"> on <span className="text-indigo-400 font-bold">{log.targetType}</span></span>
+                            <span className="text-neutral-400 font-medium"> on <span className="text-red-400 font-bold">{log.targetType}</span></span>
                           )}
                         </p>
                       </div>
@@ -591,13 +643,13 @@ export default function DashboardPage() {
           <LiveConnectionMonitor activeUIDs={activeUIDList} />
 
           <div className="rounded-2xl glass-panel p-6 shadow-2xl space-y-6">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-neutral-400 border-b border-white/5 pb-4">Account Information</h2>
+            <h2 className="text-xs font-extrabold uppercase tracking-wider text-neutral-400 border-b border-white/5 pb-4">Account Settings</h2>
             <div className="space-y-6">
               <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-500">
                   Access Level
                 </p>
-                <Badge className="mt-2 capitalize bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-3 py-1 rounded-full font-bold text-xs shadow-sm">
+                <Badge className="mt-2 capitalize bg-red-500/10 text-red-300 border border-red-500/20 px-3 py-1 rounded-full font-bold text-xs shadow-sm">
                   {session?.user?.role}
                 </Badge>
               </div>
@@ -616,23 +668,47 @@ export default function DashboardPage() {
                 </p>
                 <div className="mt-3.5 h-2 overflow-hidden rounded-full bg-black/40 border border-white/5 shadow-inner">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 shadow-[0_0_12px_rgba(99,102,241,0.5)] transition-all duration-[1000ms] ease-out"
+                    className="h-full rounded-full bg-gradient-to-r from-red-500 to-red-700 shadow-[0_0_12px_rgba(220,38,38,0.5)] transition-all duration-[1000ms] ease-out"
                     style={{ width: `${usedPercent}%` }}
                   />
                 </div>
               </div>
-              <div className="border-t border-white/5 pt-5">
+
+              {/* Quick Actions */}
+              <div className="pt-2 space-y-2.5 border-t border-white/5">
+                <Link
+                  href="/profile"
+                  className="group relative flex items-center justify-between w-full h-10 px-4 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-red-500/5 hover:border-red-500/20 text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-red-300 transition-all overflow-hidden"
+                >
+                  <span>Edit Profile</span>
+                  <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-red-400 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+                </Link>
+                <Link
+                  href="/profile"
+                  className="group relative flex items-center justify-between w-full h-10 px-4 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-red-500/5 hover:border-red-500/20 text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-red-300 transition-all overflow-hidden"
+                >
+                  <span>Change Password</span>
+                  <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-red-400 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+                </Link>
+              </div>
+
+              <div className="pt-2 space-y-2.5 border-t border-white/5">
                 <button
                   onClick={() => signOut({ callbackUrl: "/" })}
-                  className="text-xs font-extrabold uppercase tracking-widest text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
+                  className="group relative flex items-center justify-between w-full h-10 px-4 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-rose-500/5 hover:border-rose-500/20 text-xs font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300 transition-all overflow-hidden"
                 >
-                  Logout
+                  <span>Logout</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-rose-400 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
                 </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
