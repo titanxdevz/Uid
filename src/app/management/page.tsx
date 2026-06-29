@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Users,
   Fingerprint,
@@ -17,6 +17,9 @@ import {
   Activity,
   Clock,
   Trash2,
+  Download,
+  Filter,
+  UserSearch,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -106,6 +109,25 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
 function ManagementContent() {
   const { data: session } = useSession();
   const [tab, setTab] = useState<Tab>("users");
+  const [stats, setStats] = useState({ totalUsers: 0, totalResources: 0, activeResources: 0, auditToday: 0 });
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/users").then((r) => r.json()),
+      fetch("/api/resources").then((r) => r.json()),
+      fetch("/api/audit").then((r) => r.json()),
+    ]).then(([usersData, resourcesData, auditData]) => {
+      const resources = resourcesData.success ? resourcesData.data.resources : [];
+      const logs = auditData.success ? auditData.data.logs : [];
+      const today = new Date().toDateString();
+      setStats({
+        totalUsers: usersData.success ? usersData.data.users.length : 0,
+        totalResources: resources.length,
+        activeResources: resources.filter((r: Resource) => r.status === "active").length,
+        auditToday: logs.filter((l: AuditEntry) => new Date(l.createdAt).toDateString() === today).length,
+      });
+    });
+  }, [tab]);
 
   if (!session) return null;
   if (session.user?.role !== "admin" && session.user?.role !== "manager") return null;
@@ -243,6 +265,24 @@ function ManagementContent() {
             })}
           </div>
 
+          {/* Micro stat boxes */}
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: "Total Users", value: stats.totalUsers, color: "from-red-500/10 to-red-600/5 border-red-500/15" },
+              { label: "Total Resources", value: stats.totalResources, color: "from-blue-500/10 to-blue-600/5 border-blue-500/15" },
+              { label: "Active Resources", value: stats.activeResources, color: "from-emerald-500/10 to-emerald-600/5 border-emerald-500/15" },
+              { label: "Audit Today", value: stats.auditToday, color: "from-amber-500/10 to-amber-600/5 border-amber-500/15" },
+            ].map((s, i) => (
+              <div key={i} className={`relative rounded-xl bg-gradient-to-br ${s.color} border p-4 backdrop-blur-md shadow-lg overflow-hidden group`}>
+                <div className="absolute -inset-px bg-gradient-to-r from-transparent via-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
+                <div className="relative z-10">
+                  <p className="text-[8px] font-extrabold uppercase tracking-widest text-neutral-500">{s.label}</p>
+                  <p className="text-xl font-black text-white mt-1 font-mono">{s.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* Tab content */}
           <div className="animate-fade-in">
             {tab === "users" && <UsersTab />}
@@ -300,6 +340,8 @@ function UsersTab() {
   const [showMassEdit, setShowMassEdit] = useState(false);
   const [massEditForm, setMassEditForm] = useState({ role: "", isActive: true, credits: 0 });
   const [massEditing, setMassEditing] = useState(false);
+  const [showUserLookup, setShowUserLookup] = useState(false);
+  const [lookupQuery, setLookupQuery] = useState("");
 
   const fetchUsers = useCallback(() => {
     setLoading(true);
@@ -330,6 +372,17 @@ function UsersTab() {
   }
 
   const filteredUsers = users.filter((u) => u.name || u.email);
+
+  const totalUsers = users.length;
+  const activeCount = users.filter((u) => u.isActive).length;
+  const inactiveCount = totalUsers - activeCount;
+  const adminCount = users.filter((u) => u.role === "admin").length;
+  const managerCount = users.filter((u) => u.role === "manager").length;
+  const userCount = users.filter((u) => u.role === "user").length;
+
+  const lookupResults = lookupQuery.trim()
+    ? users.filter((u) => u.name.toLowerCase().includes(lookupQuery.toLowerCase()) || u.email.toLowerCase().includes(lookupQuery.toLowerCase()))
+    : users;
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -414,8 +467,46 @@ function UsersTab() {
     fetchUsers();
   }
 
+  function handleExportUsersCSV() {
+    const headers = ["id", "name", "email", "role", "credits", "creditsUsed", "isActive"];
+    const rows = users.map((u) => [
+      u.id,
+      `"${u.name.replace(/"/g, '""')}"`,
+      u.email,
+      u.role,
+      u.credits,
+      u.creditsUsed,
+      u.isActive,
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "users.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-6">
+      {/* Summary pills row */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { label: "Total", value: totalUsers, color: "bg-neutral-500/10 text-neutral-300 border-neutral-500/20" },
+          { label: "Active", value: activeCount, color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+          { label: "Inactive", value: inactiveCount, color: "bg-rose-500/10 text-rose-400 border-rose-500/20" },
+          { label: "Admin", value: adminCount, color: "bg-red-500/10 text-red-400 border-red-500/20" },
+          { label: "Manager", value: managerCount, color: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+          { label: "User", value: userCount, color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+        ].map((p) => (
+          <span key={p.label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${p.color}`}>
+            {p.label}
+            <span className="font-mono">{p.value}</span>
+          </span>
+        ))}
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative w-full sm:max-w-xs group">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500 group-focus-within:text-red-400 transition-colors" />
@@ -428,6 +519,17 @@ function UsersTab() {
           />
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowUserLookup(true)}
+            className="group relative h-9 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider overflow-hidden cursor-pointer"
+            title="Quick find user"
+          >
+            <span className="absolute inset-0 bg-gradient-to-r from-violet-600 to-violet-800" />
+            <span className="relative flex items-center gap-1.5 text-white">
+              <UserSearch className="h-3.5 w-3.5" />
+              Find
+            </span>
+          </button>
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-2 animate-fade-in">
               <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-md">{selectedIds.size} selected</span>
@@ -447,6 +549,13 @@ function UsersTab() {
               </button>
             </div>
           )}
+          <button onClick={handleExportUsersCSV} className="group relative h-9 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider overflow-hidden cursor-pointer">
+            <span className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-emerald-800" />
+            <span className="relative flex items-center gap-1.5 text-white">
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </span>
+          </button>
           <button onClick={() => setShowAdd(!showAdd)} className="group relative inline-flex items-center justify-center h-10 px-5 rounded-xl text-xs font-bold uppercase tracking-wider overflow-hidden">
             <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-800" />
             <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
@@ -572,6 +681,48 @@ function UsersTab() {
           </div>
         )}
       </div>
+
+      {/* User Lookup Modal */}
+      <Modal open={showUserLookup} onClose={() => { setShowUserLookup(false); setLookupQuery(""); }} title="Quick Find User">
+        <div className="space-y-4">
+          <div className="relative group">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500 group-focus-within:text-red-400 transition-colors" />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={lookupQuery}
+              onChange={(e) => setLookupQuery(e.target.value)}
+              autoFocus
+              className="w-full h-11 pl-10 pr-4 rounded-xl bg-black/50 border border-red-900/25 text-sm text-white placeholder-neutral-600 font-medium outline-none focus:border-red-500/50 focus:shadow-[0_0_12px_rgba(220,38,38,0.1)] transition-all"
+            />
+          </div>
+          <div className="max-h-64 overflow-y-auto space-y-1.5">
+            {lookupResults.length === 0 ? (
+              <p className="text-xs text-neutral-500 text-center py-6 font-medium">No users match your search</p>
+            ) : (
+              lookupResults.slice(0, 20).map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => { setShowUserLookup(false); setLookupQuery(""); openEdit(u); }}
+                  className="w-full flex items-center gap-3 rounded-xl bg-black/30 border border-white/5 px-4 py-3 hover:bg-red-500/10 hover:border-red-500/20 transition-all text-left cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500/20 to-red-700/20 border border-red-500/20 flex items-center justify-center text-xs font-bold text-red-400 shrink-0">
+                    {getInitials(u.name)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-neutral-200 truncate">{u.name}</p>
+                    <p className="text-[10px] text-neutral-500 truncate">{u.email}</p>
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-wider border shrink-0 ${roleColors[u.role] || roleColors.user}`}>
+                    {u.role}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal open={showDeleteConfirm} onClose={() => { if (!deleting) { setShowDeleteConfirm(false); setSelectedIds(new Set()); } }} title={selectedIds.size > 1 ? `Delete ${selectedIds.size} Users` : "Delete User"}>
@@ -707,6 +858,8 @@ function UsersTab() {
 }
 
 function ResourcesTab() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -714,6 +867,12 @@ function ResourcesTab() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ uid: "", label: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [selectedResIds, setSelectedResIds] = useState<Set<string>>(new Set());
+  const [showResDeleteConfirm, setShowResDeleteConfirm] = useState(false);
+  const [resDeleting, setResDeleting] = useState(false);
+  const [showEditResource, setShowEditResource] = useState<Resource | null>(null);
+  const [editResourceForm, setEditResourceForm] = useState({ label: "", status: "active" });
+  const [resourceSubmitting, setResourceSubmitting] = useState(false);
 
   const fetchResources = useCallback(() => {
     setLoading(true);
@@ -726,6 +885,28 @@ function ResourcesTab() {
   }, [search]);
 
   useEffect(() => { fetchResources(); }, [fetchResources]);
+
+  const totalResources = resources.length;
+  const activeResources = resources.filter((r) => r.status === "active").length;
+  const expiredResources = resources.filter((r) => r.status === "expired").length;
+  const revokedResources = resources.filter((r) => r.status === "revoked").length;
+  const suspendedResources = resources.filter((r) => r.status === "suspended").length;
+
+  function toggleResSelect(id: string) {
+    setSelectedResIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleResSelectAll() {
+    if (selectedResIds.size === resources.length) {
+      setSelectedResIds(new Set());
+    } else {
+      setSelectedResIds(new Set(resources.map((r) => r._id)));
+    }
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -741,14 +922,84 @@ function ResourcesTab() {
     } finally { setSubmitting(false); }
   }
 
+  async function handleMassResDelete() {
+    setResDeleting(true);
+    for (const id of selectedResIds) {
+      try { await fetch(`/api/resources/${id}`, { method: "DELETE" }); } catch { /* skip */ }
+    }
+    setSelectedResIds(new Set());
+    setShowResDeleteConfirm(false);
+    setResDeleting(false);
+    fetchResources();
+  }
+
+  function openEditResource(r: Resource) {
+    setShowEditResource(r);
+    setEditResourceForm({ label: r.label || "", status: r.status });
+  }
+
+  async function handleEditResourceSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!showEditResource) return;
+    setResourceSubmitting(true);
+    try {
+      const res = await fetch(`/api/resources/${showEditResource._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editResourceForm),
+      });
+      const d = await res.json();
+      if (d.success) { setShowEditResource(null); fetchResources(); }
+      else alert(d.error || "Failed to update resource");
+    } catch { alert("An error occurred"); }
+    finally { setResourceSubmitting(false); }
+  }
+
   function copyUid(uid: string, id: string) {
     navigator.clipboard.writeText(uid);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   }
 
+  function handleExportResourcesCSV() {
+    const headers = ["_id", "uid", "label", "ownerName", "status", "expiresAt", "createdAt"];
+    const rows = resources.map((r) => [
+      r._id,
+      r.uid,
+      `"${(r.label || "").replace(/"/g, '""')}"`,
+      `"${(r.owner?.name || "").replace(/"/g, '""')}"`,
+      r.status,
+      r.expiresAt || "",
+      r.createdAt,
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "resources.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-6">
+      {/* Summary pills row */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { label: "Total", value: totalResources, color: "bg-neutral-500/10 text-neutral-300 border-neutral-500/20" },
+          { label: "Active", value: activeResources, color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+          { label: "Expired", value: expiredResources, color: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+          { label: "Revoked", value: revokedResources, color: "bg-rose-500/10 text-rose-400 border-rose-500/20" },
+          { label: "Suspended", value: suspendedResources, color: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+        ].map((p) => (
+          <span key={p.label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${p.color}`}>
+            {p.label}
+            <span className="font-mono">{p.value}</span>
+          </span>
+        ))}
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative w-full sm:max-w-xs group">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500 group-focus-within:text-red-400 transition-colors" />
@@ -760,17 +1011,38 @@ function ResourcesTab() {
             className="w-full h-10 pl-10 pr-4 rounded-xl bg-black/40 border border-red-900/20 text-xs text-white placeholder-neutral-600 font-medium outline-none focus:border-red-500/40 focus:shadow-[0_0_12px_rgba(220,38,38,0.08)] transition-all"
           />
         </div>
-        <button
-          onClick={() => setShowAdd(!showAdd)}
-          className="group relative inline-flex items-center justify-center h-10 px-5 rounded-xl text-xs font-bold uppercase tracking-wider overflow-hidden"
-        >
-          <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-800" />
-          <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-          <span className="relative flex items-center gap-1.5 text-white">
-            <Plus className="h-4 w-4" />
-            Add UID
-          </span>
-        </button>
+        <div className="flex items-center gap-3">
+          {selectedResIds.size > 0 && (
+            <div className="flex items-center gap-2 animate-fade-in">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-md">{selectedResIds.size} selected</span>
+              <button onClick={() => setShowResDeleteConfirm(true)} className="group relative h-9 px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider overflow-hidden">
+                <span className="absolute inset-0 bg-gradient-to-r from-rose-600 to-rose-800" />
+                <span className="relative flex items-center gap-1.5 text-white">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </span>
+              </button>
+            </div>
+          )}
+          <button onClick={handleExportResourcesCSV} className="group relative h-9 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider overflow-hidden cursor-pointer">
+            <span className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-emerald-800" />
+            <span className="relative flex items-center gap-1.5 text-white">
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </span>
+          </button>
+          <button
+            onClick={() => setShowAdd(!showAdd)}
+            className="group relative inline-flex items-center justify-center h-10 px-5 rounded-xl text-xs font-bold uppercase tracking-wider overflow-hidden"
+          >
+            <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-800" />
+            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+            <span className="relative flex items-center gap-1.5 text-white">
+              <Plus className="h-4 w-4" />
+              Add UID
+            </span>
+          </button>
+        </div>
       </div>
 
       {showAdd && (
@@ -805,7 +1077,7 @@ function ResourcesTab() {
 
       <div className="rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md shadow-2xl overflow-hidden">
         {loading ? (
-          <TableSkeleton cols={5} />
+          <TableSkeleton cols={isAdmin ? 7 : 5} />
         ) : resources.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-16">
             <Fingerprint className="h-10 w-10 text-neutral-600" />
@@ -816,41 +1088,133 @@ function ResourcesTab() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b border-white/5 bg-white/[0.005]">
+                  {isAdmin && (
+                    <th className="px-4 py-4.5 w-10">
+                      <input type="checkbox" checked={selectedResIds.size === resources.length && resources.length > 0} onChange={toggleResSelectAll} className="h-4 w-4 rounded border-red-900/30 bg-black/50 text-red-600 focus:ring-red-500/30 cursor-pointer" />
+                    </th>
+                  )}
                   {["UID Code", "Label", "Owner", "Status", "Expires"].map((h) => (
                     <th key={h} className={`px-6 py-4.5 text-[10px] font-bold uppercase tracking-widest text-neutral-500 ${h === "Expires" ? "text-right" : h === "Status" ? "text-center" : "text-left"}`}>{h}</th>
                   ))}
+                  {isAdmin && <th className="px-6 py-4.5 text-right text-[10px] font-bold uppercase tracking-widest text-neutral-500">Actions</th>}
                 </tr>
               </thead>
               <tbody>
-                {resources.map((r) => (
-                  <tr key={r._id} className="border-b border-white/[0.03] hover:bg-white/[0.015] transition-colors last:border-0 group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <code className="rounded-lg bg-black/50 border border-red-900/20 px-2.5 py-1 text-xs font-mono font-bold text-red-300">{r.uid}</code>
-                        <button onClick={() => copyUid(r.uid, r._id)} className="text-neutral-500 hover:text-red-400 transition-colors cursor-pointer opacity-0 group-hover:opacity-100" title="Copy UID">
-                          {copiedId === r._id ? <Check className="h-3.5 w-3.5 text-emerald-400 animate-scale-in" /> : <Copy className="h-3.5 w-3.5" />}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-neutral-300 font-semibold">{r.label || "—"}</td>
-                    <td className="px-6 py-4">
-                      <span className="text-neutral-200 font-semibold text-xs">{r.owner?.name || "N/A"}</span>
-                      {r.owner?.email && <span className="text-neutral-500 text-[10px] ml-2">{r.owner.email}</span>}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold border capitalize ${statusColors[r.status] || "bg-neutral-800 text-neutral-400 border-neutral-700/50"}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${r.status === "active" ? "bg-emerald-400 animate-pulse" : r.status === "expired" ? "bg-amber-400" : r.status === "revoked" ? "bg-rose-400" : "bg-neutral-500"}`} />
-                        {r.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right text-neutral-400 font-mono font-semibold tabular-nums text-xs">{r.expiresAt ? new Date(r.expiresAt).toLocaleDateString() : "—"}</td>
-                  </tr>
-                ))}
+                {resources.map((r) => {
+                  const isSelected = selectedResIds.has(r._id);
+                  return (
+                    <tr key={r._id} className={`border-b border-white/[0.03] transition-colors last:border-0 group ${isSelected ? "bg-red-500/5" : "hover:bg-white/[0.015]"}`}>
+                      {isAdmin && (
+                        <td className="px-4 py-4">
+                          <input type="checkbox" checked={isSelected} onChange={() => toggleResSelect(r._id)} className="h-4 w-4 rounded border-red-900/30 bg-black/50 text-red-600 focus:ring-red-500/30 cursor-pointer" />
+                        </td>
+                      )}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <code className="rounded-lg bg-black/50 border border-red-900/20 px-2.5 py-1 text-xs font-mono font-bold text-red-300">{r.uid}</code>
+                          <button onClick={() => copyUid(r.uid, r._id)} className="text-neutral-500 hover:text-red-400 transition-colors cursor-pointer opacity-0 group-hover:opacity-100" title="Copy UID">
+                            {copiedId === r._id ? <Check className="h-3.5 w-3.5 text-emerald-400 animate-scale-in" /> : <Copy className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-neutral-300 font-semibold">{r.label || "—"}</td>
+                      <td className="px-6 py-4">
+                        <span className="text-neutral-200 font-semibold text-xs">{r.owner?.name || "N/A"}</span>
+                        {r.owner?.email && <span className="text-neutral-500 text-[10px] ml-2">{r.owner.email}</span>}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold border capitalize ${statusColors[r.status] || "bg-neutral-800 text-neutral-400 border-neutral-700/50"}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${r.status === "active" ? "bg-emerald-400 animate-pulse" : r.status === "expired" ? "bg-amber-400" : r.status === "revoked" ? "bg-rose-400" : "bg-neutral-500"}`} />
+                          {r.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right text-neutral-400 font-mono font-semibold tabular-nums text-xs">{r.expiresAt ? new Date(r.expiresAt).toLocaleDateString() : "—"}</td>
+                      {isAdmin && (
+                        <td className="px-6 py-4.5 text-right">
+                          <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => openEditResource(r)} className="h-7 w-7 flex items-center justify-center rounded-lg border border-white/5 bg-white/[0.02] text-neutral-500 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-all cursor-pointer" title="Edit">
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {/* Resource Delete Confirmation Modal */}
+      <Modal open={showResDeleteConfirm} onClose={() => { if (!resDeleting) { setShowResDeleteConfirm(false); setSelectedResIds(new Set()); } }} title={selectedResIds.size > 1 ? `Delete ${selectedResIds.size} Resources` : "Delete Resource"}>
+        <div className="space-y-4">
+          <div className="rounded-xl bg-rose-500/5 border border-rose-500/15 p-4">
+            <p className="text-xs text-rose-300/80 font-medium leading-relaxed">
+              {selectedResIds.size > 1
+                ? `Are you sure you want to delete ${selectedResIds.size} UID resources? This action cannot be undone.`
+                : `Are you sure you want to delete this UID resource? This action cannot be undone.`}
+            </p>
+          </div>
+          {selectedResIds.size > 1 && (
+            <div className="max-h-32 overflow-y-auto space-y-1.5">
+              {resources.filter((r) => selectedResIds.has(r._id)).map((r) => (
+                <div key={r._id} className="flex items-center gap-2.5 text-xs text-neutral-400 bg-black/30 rounded-lg px-3 py-2 border border-white/5">
+                  <code className="text-[10px] font-mono font-bold text-red-300 bg-black/40 px-1.5 py-0.5 rounded">{r.uid}</code>
+                  <span className="font-semibold text-neutral-300">{r.label || "—"}</span>
+                  <span className="text-neutral-500 ml-auto">{r.owner?.name || "N/A"}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-3 pt-2">
+            <button onClick={handleMassResDelete} disabled={resDeleting} className="group relative flex-1 h-11 rounded-xl text-xs font-bold uppercase tracking-wider overflow-hidden disabled:opacity-50 cursor-pointer">
+              <span className="absolute inset-0 bg-gradient-to-r from-rose-600 to-rose-800" />
+              <span className="relative flex items-center justify-center gap-1.5 text-white">{resDeleting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{resDeleting ? "Deleting..." : `Delete${selectedResIds.size > 1 ? ` ${selectedResIds.size}` : ""}`}</span>
+            </button>
+            <button onClick={() => { setShowResDeleteConfirm(false); setSelectedResIds(new Set()); }} disabled={resDeleting} className="px-6 h-11 rounded-xl text-xs font-bold uppercase tracking-wider border border-white/5 text-neutral-400 hover:text-white hover:bg-white/[0.03] transition-all cursor-pointer disabled:opacity-50">Cancel</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Resource Edit Modal */}
+      <Modal open={!!showEditResource} onClose={() => setShowEditResource(null)} title="Edit UID Resource">
+        {showEditResource && (
+          <div className="mb-6 flex items-center gap-3 bg-black/30 rounded-xl p-3 border border-white/5">
+            <code className="rounded-lg bg-black/50 border border-red-900/20 px-2.5 py-1 text-xs font-mono font-bold text-red-300">{showEditResource.uid}</code>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white truncate">{showEditResource.label || "—"}</p>
+              <p className="text-[11px] text-neutral-500 truncate">{showEditResource.owner?.name || "N/A"}</p>
+            </div>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border capitalize ${statusColors[showEditResource.status] || "bg-neutral-800 text-neutral-400 border-neutral-700/50"}`}>
+              {showEditResource.status}
+            </span>
+          </div>
+        )}
+        <form onSubmit={handleEditResourceSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 block">Label</label>
+            <input type="text" value={editResourceForm.label} onChange={(e) => setEditResourceForm({ ...editResourceForm, label: e.target.value })} className="w-full h-11 px-4 rounded-xl bg-black/50 border border-red-900/25 text-sm text-white placeholder-neutral-600 font-medium outline-none focus:border-red-500/50 focus:shadow-[0_0_12px_rgba(220,38,38,0.1)] transition-all" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 block">Status</label>
+            <select value={editResourceForm.status} onChange={(e) => setEditResourceForm({ ...editResourceForm, status: e.target.value })} className="w-full h-11 px-4 rounded-xl bg-black/50 border border-red-900/25 text-sm text-white font-medium outline-none focus:border-red-500/50 transition-all cursor-pointer">
+              {["active", "expired", "revoked", "suspended"].map((s) => (
+                <option key={s} value={s} className="bg-[#0b0c16] capitalize">{s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-3 pt-4 border-t border-white/5">
+            <button type="submit" disabled={resourceSubmitting} className="group relative flex-1 h-11 rounded-xl text-xs font-bold uppercase tracking-wider overflow-hidden disabled:opacity-50 cursor-pointer">
+              <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-800" />
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              <span className="relative flex items-center justify-center gap-1.5 text-white">{resourceSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Save Changes</span>
+            </button>
+            <button type="button" onClick={() => setShowEditResource(null)} className="px-6 h-11 rounded-xl text-xs font-bold uppercase tracking-wider border border-white/5 text-neutral-400 hover:text-white hover:bg-white/[0.03] transition-all cursor-pointer">Cancel</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
@@ -858,6 +1222,7 @@ function ResourcesTab() {
 function AuditTab() {
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionFilter, setActionFilter] = useState<string>("all");
 
   useEffect(() => {
     fetch("/api/audit")
@@ -865,6 +1230,18 @@ function AuditTab() {
       .then((d) => d.success && setLogs(d.data.logs))
       .finally(() => setLoading(false));
   }, []);
+
+  const filteredLogs = actionFilter === "all" ? logs : logs.filter((l) => l.action === actionFilter);
+
+  const actionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const l of logs) {
+      counts[l.action] = (counts[l.action] || 0) + 1;
+    }
+    return counts;
+  }, [logs]);
+
+  const filterActions = ["all", "create", "update", "delete", "login"];
 
   const actionColors: Record<string, string> = {
     create: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
@@ -882,16 +1259,46 @@ function AuditTab() {
 
   return (
     <div className="space-y-4">
+      {/* Action filter pills */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {filterActions.map((a) => (
+          <button
+            key={a}
+            onClick={() => setActionFilter(a)}
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${
+              actionFilter === a
+                ? "bg-red-500/15 text-red-300 border-red-500/30 shadow-[0_0_12px_rgba(220,38,38,0.1)]"
+                : "bg-black/30 text-neutral-500 border-white/5 hover:text-neutral-300 hover:border-white/10"
+            }`}
+          >
+            {a === "all" ? "All" : a}
+          </button>
+        ))}
+        <span className="text-[9px] text-neutral-600 font-mono ml-auto">{filteredLogs.length} entries</span>
+      </div>
+
+      {/* Action count summary */}
+      {!loading && logs.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(actionCounts).map(([action, count]) => (
+            <span key={action} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${getActionColor(action)}`}>
+              {action}
+              <span className="font-mono">{count}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <div className="rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md shadow-2xl"><TableSkeleton cols={5} /></div>
-      ) : logs.length === 0 ? (
+      ) : filteredLogs.length === 0 ? (
         <div className="rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md shadow-2xl flex flex-col items-center gap-3 py-16">
           <ScrollText className="h-10 w-10 text-neutral-600" />
           <p className="text-sm font-bold uppercase tracking-wider text-neutral-500">No audit log entries found</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {logs.map((l, idx) => (
+          {filteredLogs.map((l, idx) => (
             <div key={l._id} className="group rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-5 hover:bg-white/[0.02] hover:border-red-900/20 transition-all duration-300 relative overflow-hidden">
               <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-red-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <div className="flex items-start gap-4">
@@ -899,7 +1306,7 @@ function AuditTab() {
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${getActionColor(l.action)} border-2`}>
                     {l.action.charAt(0).toUpperCase()}
                   </div>
-                  {idx < logs.length - 1 && <div className="w-px flex-1 bg-gradient-to-b from-white/5 to-transparent min-h-[12px]" />}
+                  {idx < filteredLogs.length - 1 && <div className="w-px flex-1 bg-gradient-to-b from-white/5 to-transparent min-h-[12px]" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 flex-wrap">

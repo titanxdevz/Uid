@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Sparkles,
@@ -10,7 +10,6 @@ import {
   Fingerprint,
   Copy,
   Check,
-  ArrowRight,
   ArrowUpRight,
   ArrowDownRight,
   Zap,
@@ -23,6 +22,10 @@ import {
   LogOut,
   Settings,
   Bell,
+  Plus,
+  Search,
+  Timer,
+  Calendar,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -213,6 +216,11 @@ export default function DashboardPage() {
   const [recentActivity, setRecentActivity] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [uidValue, setUidValue] = useState("");
+  const [labelValue, setLabelValue] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [expiringSoon, setExpiringSoon] = useState<Resource[]>([]);
 
   useEffect(() => {
     const isAdmin = session?.user?.role === "admin" || session?.user?.role === "manager";
@@ -231,11 +239,51 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, [session]);
 
+  useEffect(() => {
+    setExpiringSoon(allResources.filter(r => {
+      if (!r.expiresAt) return false;
+      const days = (new Date(r.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+      return days >= 0 && days <= 7;
+    }));
+  }, [allResources]);
+
   function copyUid(uid: string, id: string) {
     navigator.clipboard.writeText(uid);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   }
+
+  const handleCopyAll = useCallback(() => {
+    const text = recentResources.map(r => r.uid).join("\n");
+    navigator.clipboard.writeText(text);
+    setCopiedId("__all__");
+    setTimeout(() => setCopiedId(null), 2000);
+  }, [recentResources]);
+
+  const handleCreateUid = useCallback(async () => {
+    if (!uidValue.trim()) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/resources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: uidValue.trim(), label: labelValue.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const [r5, rAll] = await Promise.all([
+          fetch("/api/resources?limit=5").then(r => r.json()),
+          fetch("/api/resources?limit=1000").then(r => r.json()),
+        ]);
+        if (r5.success) setRecentResources(r5.data.resources);
+        if (rAll.success) setAllResources(rAll.data.resources);
+        setUidValue("");
+        setLabelValue("");
+      }
+    } finally {
+      setCreating(false);
+    }
+  }, [uidValue, labelValue]);
 
   const usedPercent = credits?.total ? Math.round((credits.used / credits.total) * 100) : 0;
   const remainingPercent = credits?.total ? Math.round((credits.remaining / credits.total) * 100) : 0;
@@ -259,8 +307,17 @@ export default function DashboardPage() {
   const activeResources = statusCounts.active;
   const activeUIDList = allResources.filter(r => r.status === "active").map(r => r.uid);
 
+  const filteredResources = searchQuery
+    ? recentResources.filter(r =>
+        r.uid.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (r.label && r.label.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : recentResources;
+
   const actionLabel = (action: string) =>
     action.replace(".", " ").replace(/_/g, " ");
+
+  const memberSince = "Member since";
 
   return (
     <div className="relative min-h-screen">
@@ -336,6 +393,84 @@ export default function DashboardPage() {
           <span className="text-[10px] text-neutral-400 font-medium">All systems nominal &bull; {activeResources} active UIDs</span>
         </div>
 
+        {/* UID count by status mini grid */}
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            { label: "Total", value: totalResources, from: "from-amber-500/10", to: "to-amber-600/5", border: "border-amber-500/15", text: "text-amber-400" },
+            { label: "Active", value: activeResources, from: "from-emerald-500/10", to: "to-emerald-600/5", border: "border-emerald-500/15", text: "text-emerald-400" },
+            { label: "Expiring", value: expiringSoon.length, from: "from-yellow-500/10", to: "to-yellow-600/5", border: "border-yellow-500/15", text: "text-yellow-400" },
+            { label: "Expired", value: statusCounts.expired, from: "from-red-500/10", to: "to-red-600/5", border: "border-red-500/15", text: "text-red-400" },
+          ].map((s) => (
+            <div key={s.label} className={`rounded-xl bg-gradient-to-br ${s.from} ${s.to} border ${s.border} p-3`}>
+              <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-500">{s.label}</p>
+              <p className={`text-lg font-black font-mono tabular-nums ${s.text}`}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Quick UID inline creation */}
+        <div className="rounded-xl bg-black/40 border border-red-900/20 p-4 flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-neutral-500 shrink-0">
+            <Plus className="h-3.5 w-3.5 text-red-400" />
+            New UID
+          </div>
+          <input
+            type="text"
+            placeholder="UID code"
+            value={uidValue}
+            onChange={(e) => setUidValue(e.target.value)}
+            className="flex-1 bg-black/40 border border-red-900/20 rounded-lg px-3 py-2 text-[11px] font-mono text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-red-500/30"
+          />
+          <input
+            type="text"
+            placeholder="Label (optional)"
+            value={labelValue}
+            onChange={(e) => setLabelValue(e.target.value)}
+            className="flex-[2] bg-black/40 border border-red-900/20 rounded-lg px-3 py-2 text-[11px] text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-red-500/30"
+          />
+          <button
+            onClick={handleCreateUid}
+            disabled={creating || !uidValue.trim()}
+            className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-[9px] font-bold uppercase tracking-wider text-red-400 hover:text-red-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
+          >
+            {creating ? "..." : <Plus className="h-3 w-3" />}
+            {creating ? "Creating" : "Create"}
+          </button>
+        </div>
+
+        {/* Quick actions row */}
+        <div className="flex gap-3">
+          {[
+            { label: "My UIDs", href: "/uids", icon: Fingerprint },
+            { label: "Downloads", href: "/downloads", icon: ArrowDownRight },
+            { label: "Profile", href: "/profile", icon: User },
+            { label: "Get Support", icon: Bell, disabled: true },
+          ].map((action) => {
+            const Icon = action.icon;
+            if (action.disabled) {
+              return (
+                <div
+                  key={action.label}
+                  className="flex items-center gap-2 h-9 px-4 rounded-xl bg-black/40 border border-red-900/20 text-[9px] font-bold uppercase tracking-wider text-neutral-600 opacity-50 cursor-default"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {action.label}
+                </div>
+              );
+            }
+            return (
+              <Link
+                key={action.label}
+                href={action.href!}
+                className="flex items-center gap-2 h-9 px-4 rounded-xl bg-black/40 border border-red-900/20 hover:bg-red-500/5 hover:border-red-500/20 text-[9px] font-bold uppercase tracking-wider text-neutral-400 hover:text-red-300 transition-all"
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {action.label}
+              </Link>
+            );
+          })}
+        </div>
+
         {/* Metric cards */}
         {loading ? (
           <div className="grid grid-cols-4 gap-4">
@@ -355,7 +490,14 @@ export default function DashboardPage() {
               return (
                 <div key={s.label} className={`relative rounded-2xl bg-gradient-to-br ${s.grad} border p-4 overflow-hidden group hover:-translate-y-0.5 transition-all duration-300`}>
                   <div className="flex items-start justify-between mb-3">
-                    <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-500">{s.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-500">{s.label}</span>
+                      {s.label === "Credits Used" && (
+                        <span className="text-[7px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-full px-1.5 py-0.5">
+                          +{usedPercent}% this period
+                        </span>
+                      )}
+                    </div>
                     <div className={`rounded-lg ${s.iconBg} p-1.5 border`}>
                       <Icon className="h-3.5 w-3.5" />
                     </div>
@@ -373,6 +515,20 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Status distribution pills row */}
+        <div className="flex gap-2">
+          {[
+            { label: "Active", count: statusCounts.active, color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+            { label: "Expired", count: statusCounts.expired, color: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+            { label: "Revoked", count: statusCounts.revoked, color: "bg-red-500/10 text-red-400 border-red-500/20" },
+            { label: "Suspended", count: statusCounts.suspended, color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
+          ].map((s) => (
+            <div key={s.label} className={`rounded-full ${s.color} border px-3 py-1 text-[9px] font-bold uppercase tracking-wider`}>
+              {s.label} ({s.count})
+            </div>
+          ))}
+        </div>
+
         {/* Main grid: charts + tables */}
         <div className="grid grid-cols-5 gap-5">
           {/* Left — resources bar chart */}
@@ -382,7 +538,9 @@ export default function DashboardPage() {
                 <Activity className="h-3.5 w-3.5 text-red-400" />
                 Resources by Status
               </h2>
-              <span className="text-[9px] font-mono font-bold text-neutral-500">{totalResources} total</span>
+              <Link href="/uids" className="text-[9px] font-mono font-bold text-neutral-500 hover:text-red-400 transition-colors">
+                {totalResources} total
+              </Link>
             </div>
             <StatusBarChart data={barData} />
           </div>
@@ -422,13 +580,34 @@ export default function DashboardPage() {
           {/* Recent UIDs — wider */}
           <div className="col-span-2 rounded-2xl bg-black/40 border border-red-900/20 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-red-900/10">
-              <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-2">
-                <Fingerprint className="h-3.5 w-3.5 text-red-400" />
-                Recent UIDs
-              </h2>
-              <Link href="/uids" className="text-[9px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors">
-                View All
-              </Link>
+              <div className="flex items-center gap-2">
+                <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+                  <Fingerprint className="h-3.5 w-3.5 text-red-400" />
+                  Recent UIDs
+                </h2>
+                <button
+                  onClick={handleCopyAll}
+                  className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                  title="Copy all UIDs"
+                >
+                  {copiedId === "__all__" ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-neutral-500" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-28 bg-black/40 border border-red-900/20 rounded-lg pl-6 pr-2 py-1 text-[10px] text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-red-500/30"
+                  />
+                </div>
+                <Link href="/uids" className="text-[9px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors shrink-0">
+                  View All
+                </Link>
+              </div>
             </div>
             {loading ? (
               <div className="p-5 space-y-3">
@@ -439,9 +618,14 @@ export default function DashboardPage() {
                 <Fingerprint className="h-8 w-8 text-neutral-600" />
                 <p className="text-[10px] font-bold uppercase tracking-wider">No UIDs yet</p>
               </div>
+            ) : filteredResources.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-12 text-neutral-500">
+                <Search className="h-8 w-8 text-neutral-600" />
+                <p className="text-[10px] font-bold uppercase tracking-wider">No results</p>
+              </div>
             ) : (
               <div className="divide-y divide-white/[0.03]">
-                {recentResources.map((r) => (
+                {filteredResources.map((r) => (
                   <div key={r._id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.01] transition-colors">
                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
                       <code className="text-[11px] font-mono font-bold text-red-300 truncate">{r.uid}</code>
@@ -478,6 +662,10 @@ export default function DashboardPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-white truncate">{session?.user?.name}</p>
                   <p className="text-[10px] text-neutral-500 truncate">{session?.user?.email}</p>
+                  <p className="text-[9px] text-neutral-600 mt-0.5 flex items-center gap-1">
+                    <Calendar className="h-2.5 w-2.5" />
+                    {memberSince}
+                  </p>
                 </div>
                 <Badge className="capitalize bg-red-500/10 text-red-300 border-red-500/20 rounded-lg text-[8px] font-bold px-2">
                   <Shield className="h-2.5 w-2.5 mr-1" />
@@ -494,6 +682,37 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+
+            {/* Expiring soon UIDs widget */}
+            {expiringSoon.length > 0 ? (
+              <div className="rounded-2xl bg-black/40 border border-red-900/20 p-5">
+                <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-2 mb-3">
+                  <Timer className="h-3.5 w-3.5 text-red-400" />
+                  Expiring Soon
+                </h2>
+                <div className="space-y-2">
+                  {expiringSoon.slice(0, 5).map((r) => (
+                    <div key={r._id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.01] border border-white/5">
+                      <div className="min-w-0 flex-1">
+                        <code className="text-[10px] font-mono font-bold text-red-300 truncate block">{r.uid}</code>
+                        {r.label && <p className="text-[8px] text-neutral-500 truncate">{r.label}</p>}
+                      </div>
+                      <span className="text-[9px] text-yellow-400 font-mono shrink-0 ml-2">
+                        {new Date(r.expiresAt!).toLocaleDateString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-black/40 border border-red-900/20 p-5">
+                <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-2 mb-3">
+                  <Timer className="h-3.5 w-3.5 text-red-400" />
+                  Expiring Soon
+                </h2>
+                <p className="text-[10px] text-neutral-500 italic">No resources expiring soon</p>
+              </div>
+            )}
 
             {/* Recent activity */}
             {isAdmin && (
